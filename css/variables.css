@@ -1,27 +1,18 @@
-/* =============================================================================
-   variables.css – Design Tokens
-   Sistem desain: Light mode, biru accent, Inter font
-============================================================================= */
-
 :root {
-  /* === WARNA UTAMA (Light Mode) === */
   --color-bg-base:        #f0f4ff;
   --color-bg-surface:     #ffffff;
   --color-bg-card:        #ffffff;
   --color-bg-elevated:    #e8effe;
   --color-bg-input:       #f0f4ff;
 
-  /* === BORDER === */
   --color-border:         #c8d8f8;
   --color-border-light:   #a0bef5;
   --color-border-focus:   #2563eb;
 
-  /* === ACCENT (Biru) === */
   --color-accent-primary:   #2563eb;
   --color-accent-secondary: #3b82f6;
   --color-accent-glow:      rgba(37, 99, 235, 0.2);
 
-  /* === STATUS COLORS === */
   --color-success:    #16a34a;
   --color-success-bg: rgba(22, 163, 74, 0.1);
   --color-warning:    #d97706;
@@ -31,7 +22,6 @@
   --color-info:       #0284c7;
   --color-info-bg:    rgba(2, 132, 199, 0.1);
 
-  /* === SENSOR COLORS === */
   --color-tds:        #2563eb;
   --color-ph:         #16a34a;
   --color-temp:       #d97706;
@@ -39,17 +29,14 @@
   --color-rain:       #0284c7;
   --color-fuzzy:      #db2777;
 
-  /* === TEXT === */
   --color-text-primary:   #1e2a4a;
   --color-text-secondary: #4a6080;
   --color-text-muted:     #7a90b0;
   --color-text-disabled:  #b0c0d8;
 
-  /* === TYPOGRAPHY === */
   --font-primary: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
 
-  /* === SPACING === */
   --space-1:  4px;
   --space-2:  8px;
   --space-3:  12px;
@@ -61,27 +48,20 @@
   --space-12: 48px;
   --space-16: 64px;
 
-  /* === BORDER RADIUS === */
   --radius-sm:  6px;
   --radius-md:  10px;
   --radius-lg:  16px;
   --radius-xl:  24px;
   --radius-full: 9999px;
 
-  /* === SHADOWS === */
   --shadow-sm:  0 2px 8px rgba(37,99,235,0.08);
   --shadow-md:  0 4px 24px rgba(37,99,235,0.12);
   --shadow-lg:  0 8px 48px rgba(37,99,235,0.16);
   --shadow-glow: 0 0 24px var(--color-accent-glow);
 
-  /* === TRANSITIONS === */
   --transition-fast:   150ms ease;
   --transition-normal: 250ms ease;
   --transition-slow:   400ms ease;
 
-  /* === NAVBAR === */
   --navbar-height: 64px;
-
-  /* === BREAKPOINTS (reference only – use in media queries) === */
-  /* Mobile: < 480px | Tablet: 480–1024px | Desktop: > 1024px */
 }

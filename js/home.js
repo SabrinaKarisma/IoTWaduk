@@ -133,9 +133,6 @@ function buildSensorCards() {
   `).join('');
 }
 
-// =============================================================================
-// onNewSensorData() – Dipanggil setiap INSERT baru dari Realtime
-// =============================================================================
 function onNewSensorData(row) {
   lastDataTimestamp = Date.now();
   updateSensorCards(row);
@@ -143,9 +140,6 @@ function onNewSensorData(row) {
   updateOnlineStatus(true);
 }
 
-// =============================================================================
-// loadLatestSensorData() – Muat 1 row terakhir saat pertama kali halaman dibuka
-// =============================================================================
 async function loadLatestSensorData() {
   try {
     const { data, error } = await window.db
@@ -157,7 +151,6 @@ async function loadLatestSensorData() {
 
     if (error || !data) return;
 
-    // Cek apakah data masih fresh (< 30 detik)
     const age = Date.now() - new Date(data.timestamp).getTime();
     if (age < 30000) {
       lastDataTimestamp = Date.now();
@@ -172,9 +165,6 @@ async function loadLatestSensorData() {
   }
 }
 
-// =============================================================================
-// updateSensorCards() – Update semua nilai sensor card
-// =============================================================================
 function updateSensorCards(row) {
   const { fmt, tdsColor, phColor, mapRange, clamp } = window.utils;
 
@@ -218,9 +208,6 @@ function updateSensorCards(row) {
   document.getElementById('cardFuzzyBar').style.width = clamp(mapRange(fuzzy, 0, 180, 0, 100), 0, 100) + '%';
 }
 
-// =============================================================================
-// updateGateIndicator() – Update circular gauge dan teks pintu air
-// =============================================================================
 function updateGateIndicator(row) {
   const { gateLabel, gateColor, fmt } = window.utils;
 
@@ -259,9 +246,6 @@ function updateGateIndicator(row) {
   if (s3) s3.textContent = `${row.servo3_pos ?? '—'}°`;
 }
 
-// =============================================================================
-// startOfflineDetection() – Cek setiap 5 detik
-// =============================================================================
 function startOfflineDetection() {
   if (homeOfflineTimer) clearInterval(homeOfflineTimer);
   homeOfflineTimer = setInterval(() => {
@@ -280,7 +264,6 @@ function updateOnlineStatus(isOnline) {
     dot.className  = 'status-dot online';
     text.textContent = 'ONLINE';
     text.style.color = 'var(--color-success)';
-    // Hilangkan kelas offline dari semua sensor card
     document.querySelectorAll('.sensor-card').forEach(c => c.classList.remove('offline'));
   } else {
     dot.className  = 'status-dot offline';
@@ -290,16 +273,12 @@ function updateOnlineStatus(isOnline) {
   }
 }
 
-// =============================================================================
-// loadDailySummary() – Cache harian dari tabel daily_summary
-// =============================================================================
 async function loadDailySummary() {
   const todayStr = window.utils.fmtDateISO();
   document.getElementById('summaryDate').textContent =
     new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   try {
-    // Cek cache
     const { data: cached } = await window.db
       .from('daily_summary')
       .select('*')
@@ -312,7 +291,6 @@ async function loadDailySummary() {
       return;
     }
 
-    // Hitung dari sensor_data 24 jam terakhir
     const since = new Date();
     since.setHours(0, 0, 0, 0);
 
@@ -364,9 +342,6 @@ async function loadDailySummary() {
   }
 }
 
-// =============================================================================
-// renderSummary() – Render HTML ringkasan harian
-// =============================================================================
 function renderSummary(s) {
   const { fmt } = window.utils;
   const total = (s.gate_closed_count || 0) + (s.gate_half_count || 0) + (s.gate_full_count || 0);
@@ -417,7 +392,6 @@ function renderSummary(s) {
   `;
 }
 
-// Cleanup saat meninggalkan halaman
 function destroyHome() {
   if (homeOfflineTimer) {
     clearInterval(homeOfflineTimer);

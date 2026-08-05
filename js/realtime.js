@@ -1,9 +1,3 @@
-// =============================================================================
-// realtime.js – Supabase Realtime Subscription
-// Subscribe ke INSERT baru pada tabel sensor_data
-// Callback: dipanggil oleh home.js (dan modul lain jika perlu)
-// =============================================================================
-
 let _realtimeChannel = null;
 const _realtimeCallbacks = [];
 

@@ -1,11 +1,3 @@
-// =============================================================================
-// control.js – Halaman CONTROL
-// Kontrol manual servo + konfigurasi kalibrasi Fuzzy
-// =============================================================================
-
-// =============================================================================
-// renderControl() – Render HTML halaman Control
-// =============================================================================
 function renderControl() {
   const main = document.getElementById('mainContent');
   main.innerHTML = `
@@ -134,13 +126,9 @@ function renderControl() {
     </div>
   `;
 
-  // Load nilai kalibrasi dari Supabase
   loadCalibration();
 }
 
-// =============================================================================
-// buildServoWidget() – HTML untuk satu servo control
-// =============================================================================
 function buildServoWidget(n) {
   return `
     <div class="servo-control">
@@ -170,9 +158,6 @@ function buildServoWidget(n) {
   `;
 }
 
-// =============================================================================
-// buildRuleGrid() – 9 input untuk rule base 3×3
-// =============================================================================
 function buildRuleGrid() {
   const labels = [
     ['TDS Rendah + Jarak Rendah','TDS Rendah + Jarak Sedang','TDS Rendah + Jarak Tinggi'],
@@ -196,15 +181,11 @@ function buildRuleGrid() {
   return html;
 }
 
-// =============================================================================
-// sendServo() – Kirim perintah servo ke Supabase
-// =============================================================================
 async function sendServo(servoId, pos) {
   pos = Math.max(0, Math.min(180, Math.round(pos)));
   const statusEl = document.getElementById(`servoStatus${servoId}`);
-  if (statusEl) { statusEl.textContent = '⏳ Mengirim...'; statusEl.className = 'servo-status sent'; }
+  if (statusEl) { statusEl.textContent = 'Mengirim...'; statusEl.className = 'servo-status sent'; }
 
-  // Update slider display
   const slider = document.getElementById(`servoSlider${servoId}`);
   const display = document.getElementById(`servoPos${servoId}Display`);
   if (slider)  slider.value = pos;
@@ -219,20 +200,15 @@ async function sendServo(servoId, pos) {
     });
 
     if (error) throw error;
-    if (statusEl) { statusEl.textContent = '✅ Terkirim – Menunggu eksekusi...'; statusEl.className = 'servo-status sent'; }
+    if (statusEl) { statusEl.textContent = 'Terkirim – Menunggu eksekusi...'; statusEl.className = 'servo-status sent'; }
     notify.success(`Servo ${servoId} → ${pos}°`);
 
-    // Poll status eksekusi
     pollServoExecution(servoId, statusEl);
   } catch (e) {
-    if (statusEl) { statusEl.textContent = '❌ Gagal mengirim'; statusEl.className = 'servo-status error'; }
+    if (statusEl) { statusEl.textContent = 'Gagal mengirim'; statusEl.className = 'servo-status error'; }
     notify.error(`Gagal kirim perintah servo ${servoId}`);
   }
 }
-
-// =============================================================================
-// sendAllServos() – Kirim ke semua 3 servo
-// =============================================================================
 async function sendAllServos(pos) {
   pos = Math.max(0, Math.min(180, Math.round(pos)));
   for (let i = 1; i <= 3; i++) {
@@ -241,9 +217,6 @@ async function sendAllServos(pos) {
   }
 }
 
-// =============================================================================
-// adjustServo() – Increment/decrement slider nilai
-// =============================================================================
 function adjustServo(n, delta) {
   const slider = document.getElementById(`servoSlider${n}`);
   const display = document.getElementById(`servoPos${n}Display`);
@@ -253,15 +226,12 @@ function adjustServo(n, delta) {
   if (display) display.textContent = newVal + '°';
 }
 
-// =============================================================================
-// pollServoExecution() – Cek apakah command sudah dieksekusi (maks 30 detik)
-// =============================================================================
 async function pollServoExecution(servoId, statusEl) {
   const start = Date.now();
   const interval = setInterval(async () => {
     if (Date.now() - start > 30000) {
       clearInterval(interval);
-      if (statusEl) { statusEl.textContent = '⏱️ Timeout'; statusEl.className = 'servo-status error'; }
+      if (statusEl) { statusEl.textContent = 'Timeout'; statusEl.className = 'servo-status error'; }
       return;
     }
     try {
@@ -275,17 +245,12 @@ async function pollServoExecution(servoId, statusEl) {
         .single();
 
       if (!data) {
-        // Command sudah dieksekusi (tidak ada unexecuted)
         clearInterval(interval);
-        if (statusEl) { statusEl.textContent = '✅ Dieksekusi!'; statusEl.className = 'servo-status executed'; }
+        if (statusEl) { statusEl.textContent = 'Dieksekusi!'; statusEl.className = 'servo-status executed'; }
       }
     } catch { /* ignore */ }
   }, 2000);
 }
-
-// =============================================================================
-// loadCalibration() – Muat nilai kalibrasi dari Supabase calibration_config
-// =============================================================================
 async function loadCalibration() {
   try {
     const { data, error } = await window.db
@@ -318,20 +283,16 @@ async function loadCalibration() {
       for (let j = 0; j < 3; j++)
         set(`rule_${i}_${j}`, `fr_${i}${j}`);
 
-    // Update mode badge
     notify.info('Konfigurasi kalibrasi dimuat dari cloud');
   } catch (e) {
     console.error('[Control] Gagal load kalibrasi:', e);
   }
 }
 
-// =============================================================================
-// saveCalibration() – Simpan semua nilai kalibrasi ke Supabase
-// =============================================================================
 async function saveCalibration() {
   const btn    = document.getElementById('btnSaveCalib');
   const status = document.getElementById('calibStatus');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Menyimpan...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
   const entries = [
     { config_key: 'tds_slope',    config_value: +document.getElementById('calibTdsSlope').value },
@@ -359,18 +320,17 @@ async function saveCalibration() {
       if (error) throw error;
     }
 
-    if (status) { status.textContent = '✅ Tersimpan! ESP32 akan sync dalam ≤30 detik'; status.style.color = 'var(--color-success)'; }
+    if (status) { status.textContent = 'Tersimpan! ESP32 akan sync dalam ≤30 detik'; status.style.color = 'var(--color-success)'; }
     notify.success('Kalibrasi berhasil disimpan ke cloud!');
   } catch (e) {
-    if (status) { status.textContent = '❌ Gagal menyimpan: ' + e.message; status.style.color = 'var(--color-danger)'; }
+    if (status) { status.textContent = 'Gagal menyimpan: ' + e.message; status.style.color = 'var(--color-danger)'; }
     notify.error('Gagal menyimpan kalibrasi');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '💾 Simpan Kalibrasi ke Cloud'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Simpan Kalibrasi ke Cloud'; }
   }
 }
 
 window.controlModule = { renderControl };
-// Expose ke global untuk onclick handlers
 window.sendServo     = sendServo;
 window.sendAllServos = sendAllServos;
 window.adjustServo   = adjustServo;

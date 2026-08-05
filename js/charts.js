@@ -1,15 +1,9 @@
-// =============================================================================
-// charts.js – Chart.js Wrapper & Defaults
-// =============================================================================
-
-// Default Chart.js global config
 Chart.defaults.font.family  = "'Inter', system-ui, sans-serif";
 Chart.defaults.font.size    = 12;
 Chart.defaults.color        = '#9090c0';
 Chart.defaults.borderColor  = '#2a2a5a';
 Chart.defaults.animation.duration = 400;
 
-// Registry untuk semua chart instance (untuk destroy saat navigasi)
 const chartRegistry = {};
 
 /**
@@ -21,7 +15,6 @@ function createLineChart(canvasId, opts = {}) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
 
-  // Destroy instance lama jika ada
   if (chartRegistry[canvasId]) {
     chartRegistry[canvasId].destroy();
     delete chartRegistry[canvasId];
@@ -90,9 +83,7 @@ function createLineChart(canvasId, opts = {}) {
   return chart;
 }
 
-/**
- * Buat atau update bar chart (untuk distribusi bukaan pintu)
- */
+
 function createBarChart(canvasId, opts = {}) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return null;
@@ -140,20 +131,14 @@ function createBarChart(canvasId, opts = {}) {
   return chart;
 }
 
-/**
- * Update data chart yang sudah ada
- */
+
 function updateChart(canvasId, labels, data) {
   const chart = chartRegistry[canvasId];
   if (!chart) return;
   chart.data.labels = labels;
   chart.data.datasets[0].data = data;
-  chart.update('none');  // Tidak animate saat live update
+  chart.update('none'); 
 }
-
-/**
- * Destroy semua chart (dipanggil saat navigasi halaman)
- */
 function destroyAllCharts() {
   Object.entries(chartRegistry).forEach(([id, chart]) => {
     chart.destroy();
@@ -161,9 +146,6 @@ function destroyAllCharts() {
   });
 }
 
-/**
- * Konversi hex ke rgba
- */
 function hexToRgba(hex, alpha = 1) {
   const r = parseInt(hex.slice(1,3), 16);
   const g = parseInt(hex.slice(3,5), 16);

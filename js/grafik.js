@@ -1,13 +1,5 @@
-// =============================================================================
-// grafik.js – Halaman GRAFIK
-// Time-series charts: TDS, pH, Suhu, Jarak, Fuzzy Output, Bukaan Pintu
-// =============================================================================
-
 let grafikActiveRange = '6h';
 
-// =============================================================================
-// renderGrafik() – Render HTML + charts
-// =============================================================================
 function renderGrafik() {
   const main = document.getElementById('mainContent');
   main.innerHTML = `
@@ -75,19 +67,14 @@ function renderGrafik() {
   loadGrafikData();
 }
 
-// =============================================================================
-// setTimeRange() – Ganti range dan reload data
-// =============================================================================
 function setTimeRange(range) {
   grafikActiveRange = range;
 
-  // Update tombol aktif
   ['1h','6h','24h','7d'].forEach(r => {
     const btn = document.getElementById(`trBtn${r}`);
     if (btn) btn.classList.toggle('active', r === range);
   });
 
-  // Destroy semua chart lama dan reload
   window.charts.destroyAllCharts();
   loadGrafikData();
 }
@@ -97,9 +84,6 @@ function refreshGrafik() {
   loadGrafikData();
 }
 
-// =============================================================================
-// loadGrafikData() – Query data dari Supabase berdasarkan range waktu
-// =============================================================================
 async function loadGrafikData() {
   const loading = document.getElementById('grafikLoading');
   if (loading) loading.style.display = 'block';
@@ -122,12 +106,10 @@ async function loadGrafikData() {
       return;
     }
 
-    // Downsample jika data terlalu banyak (maks 300 points per chart)
     const rows = data.length > 300 ? downsample(data, 300) : data;
 
     const labels = rows.map(r => window.utils.fmtTimeOnly(r.timestamp));
 
-    // Render charts
     window.charts.createLineChart('chartTDS', {
       label: 'TDS',
       color: '#4488ff',
@@ -168,7 +150,6 @@ async function loadGrafikData() {
       min: 0, max: 180
     });
 
-    // Gate distribution bar chart (count per label)
     buildGateBarChart(rows);
 
   } catch (e) {
@@ -179,11 +160,7 @@ async function loadGrafikData() {
   }
 }
 
-// =============================================================================
-// buildGateBarChart() – Bar chart distribusi bukaan pintu per jam
-// =============================================================================
 function buildGateBarChart(rows) {
-  // Kelompokkan per jam
   const hourMap = {};
   rows.forEach(r => {
     const hour = new Date(r.timestamp).getHours();
@@ -200,16 +177,13 @@ function buildGateBarChart(rows) {
   window.charts.createBarChart('chartGate', {
     labels,
     datasets: [
-      { label: '🔒 Tertutup',    data: closed, backgroundColor: 'rgba(255,68,102,0.7)',  borderRadius: 4 },
-      { label: '⚡ Setengah',    data: half,   backgroundColor: 'rgba(255,179,0,0.7)',   borderRadius: 4 },
-      { label: '✅ Buka Penuh', data: full,   backgroundColor: 'rgba(0,230,118,0.7)',   borderRadius: 4 }
+      { label: 'Tertutup',    data: closed, backgroundColor: 'rgba(255,68,102,0.7)',  borderRadius: 4 },
+      { label: 'Setengah',    data: half,   backgroundColor: 'rgba(255,179,0,0.7)',   borderRadius: 4 },
+      { label: 'Buka Penuh', data: full,   backgroundColor: 'rgba(0,230,118,0.7)',   borderRadius: 4 }
     ]
   });
 }
 
-// =============================================================================
-// getRangeSince() – Hitung tanggal awal berdasarkan range string
-// =============================================================================
 function getRangeSince(range) {
   const now = new Date();
   switch (range) {
@@ -222,9 +196,6 @@ function getRangeSince(range) {
   return now;
 }
 
-// =============================================================================
-// downsample() – Ambil n titik data secara merata
-// =============================================================================
 function downsample(arr, n) {
   if (arr.length <= n) return arr;
   const step = arr.length / n;

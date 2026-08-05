@@ -1,13 +1,7 @@
-// =============================================================================
-// data.js – Halaman DATA
-// Tabel paginated, download CSV, hapus data
-// =============================================================================
-
 const DATA_PAGE_SIZE = 50;
 let dataCurrentPage  = 1;
 let dataTotalCount   = 0;
 
-// Kolom CSV
 const CSV_COLUMNS = [
   'timestamp', 'tds_ppm', 'ph_level', 'temperature_c',
   'distance_cm', 'rain_analog', 'rain_digital',
@@ -15,16 +9,13 @@ const CSV_COLUMNS = [
   'fuzzy_output', 'gate_position'
 ];
 
-// =============================================================================
-// renderData() – Render HTML halaman Data
-// =============================================================================
 function renderData() {
   const main = document.getElementById('mainContent');
   main.innerHTML = `
     <div class="page" id="dataPage">
       <div class="page-header">
         <h1 class="page-title">Data Sensor</h1>
-        <p class="page-subtitle">Seluruh data historis pembacaan sensor yang tersimpan di cloud</p>
+        <p class="page-subtitle">Seluruh data historis pembacaan sensor yang tersimpan di server</p>
       </div>
 
       <div class="data-toolbar">
@@ -81,13 +72,9 @@ function renderData() {
     </div>
   `;
 
-  // Hitung total dan muat halaman pertama
   loadDataPage(1);
 }
 
-// =============================================================================
-// loadDataPage() – Query Supabase dengan pagination
-// =============================================================================
 async function loadDataPage(page) {
   dataCurrentPage = page;
   const from = (page - 1) * DATA_PAGE_SIZE;
@@ -99,7 +86,6 @@ async function loadDataPage(page) {
   </td></tr>`;
 
   try {
-    // Query dengan count
     const { data, count, error } = await window.db
       .from('sensor_data')
       .select('*', { count: 'exact' })
@@ -111,14 +97,11 @@ async function loadDataPage(page) {
     dataTotalCount = count || 0;
     const totalPages = Math.ceil(dataTotalCount / DATA_PAGE_SIZE);
 
-    // Update info
     const infoEl = document.getElementById('dataCountInfo');
     if (infoEl) infoEl.textContent = `Total: ${dataTotalCount.toLocaleString('id-ID')} baris`;
 
-    // Render tabel
     renderTable(data || []);
 
-    // Pagination
     const paginEl = document.getElementById('dataPagination');
     const infoPage = document.getElementById('paginationInfo');
     const prevBtn  = document.getElementById('btnPrevPage');
@@ -133,15 +116,11 @@ async function loadDataPage(page) {
     console.error('[Data] Error:', e);
     const tbody = document.getElementById('dataTableBody');
     if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:24px; color:var(--color-danger)">
-      ❌ Gagal memuat data: ${e.message}
+      Gagal memuat data: ${e.message}
     </td></tr>`;
     notify.error('Gagal memuat data tabel');
   }
 }
-
-// =============================================================================
-// renderTable() – Render baris tabel dari array data
-// =============================================================================
 function renderTable(rows) {
   const tbody = document.getElementById('dataTableBody');
   if (!tbody) return;
@@ -180,24 +159,17 @@ function renderTable(rows) {
   }).join('');
 }
 
-// =============================================================================
-// goToPage() – Navigasi halaman tabel
-// =============================================================================
 function goToPage(page) {
   const totalPages = Math.ceil(dataTotalCount / DATA_PAGE_SIZE);
   if (page < 1 || page > totalPages) return;
   loadDataPage(page);
 }
 
-// =============================================================================
-// downloadCSV() – Download semua data sebagai CSV
-// =============================================================================
 async function downloadCSV() {
   const btn = document.getElementById('btnDownload');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Mengunduh...'; }
 
   try {
-    // Query semua data (tanpa limit)
     const { data, error } = await window.db
       .from('sensor_data')
       .select('*')
@@ -207,30 +179,25 @@ async function downloadCSV() {
 
     const csv = window.utils.toCSV(data || [], CSV_COLUMNS);
     const filename = `sensor_data_${window.utils.fmtDateISO()}.csv`;
-    window.utils.downloadFile('\uFEFF' + csv, filename, 'text/csv;charset=utf-8');  // BOM untuk Excel
+    window.utils.downloadFile('\uFEFF' + csv, filename, 'text/csv;charset=utf-8'); 
     notify.success(`CSV berhasil diunduh (${(data || []).length} baris)`);
   } catch (e) {
     notify.error('Gagal mengunduh CSV: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '📥 Download CSV'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Download CSV'; }
   }
 }
 
-// =============================================================================
-// confirmDeleteAll() – Konfirmasi dua tahap sebelum hapus semua data
-// =============================================================================
 function confirmDeleteAll() {
-  // Konfirmasi pertama
   const overlay = document.createElement('div');
   overlay.className = 'confirm-overlay';
   overlay.id = 'confirmOverlay';
   overlay.innerHTML = `
     <div class="confirm-box">
-      <div class="confirm-icon">⚠️</div>
       <div class="confirm-title">Hapus Semua Data?</div>
       <div class="confirm-text">
         Anda akan menghapus <strong style="color:var(--color-danger)">${dataTotalCount.toLocaleString('id-ID')} baris</strong> data sensor secara permanen.<br><br>
-        <span style="color:var(--color-warning)">⚠️ PERINGATAN: Tindakan ini tidak dapat dibatalkan!</span>
+        <span style="color:var(--color-warning)">PERINGATAN: Tindakan ini tidak dapat dibatalkan!</span>
       </div>
       <div class="confirm-btns">
         <button class="btn btn-secondary" onclick="closeConfirm()">Batal</button>
@@ -243,7 +210,6 @@ function confirmDeleteAll() {
 
 function confirmDeleteStep2() {
   closeConfirm();
-  // Konfirmasi kedua (ketik "HAPUS")
   const overlay2 = document.createElement('div');
   overlay2.className = 'confirm-overlay';
   overlay2.id = 'confirmOverlay';
@@ -280,28 +246,25 @@ function closeConfirm() {
 async function executeDeleteAll() {
   closeConfirm();
   const btn = document.getElementById('btnDelete');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Menghapus...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Menghapus...'; }
 
   try {
-    // Hapus semua data (tidak ada filter = hapus semua)
     const { error } = await window.db
       .from('sensor_data')
       .delete()
-      .gte('id', 0);  // Kondisi true untuk semua baris
-
+      .gte('id', 0);  
     if (error) throw error;
 
-    notify.success('✅ Semua data berhasil dihapus!');
+    notify.success('Semua data berhasil dihapus!');
     dataTotalCount = 0;
     loadDataPage(1);
 
-    // Hapus juga daily_summary
     await window.db.from('daily_summary').delete().gte('id', 0);
 
   } catch (e) {
     notify.error('Gagal menghapus data: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🗑️ Hapus Semua Data'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Hapus Semua Data'; }
   }
 }
 

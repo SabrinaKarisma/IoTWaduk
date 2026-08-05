@@ -1,7 +1,3 @@
-// =============================================================================
-// utils.js – Helper Functions
-// =============================================================================
-
 /**
  * Format angka desimal dengan jumlah digit tertentu
  * @param {number} val - Nilai

@@ -6,28 +6,21 @@
   <title>Dashboard IoT Waduk</title>
   <meta name="description" content="Dashboard monitoring kualitas air real-time dengan kontrol pintu air otomatis berbasis Fuzzy Logic. Pantau TDS, pH, suhu, dan level air secara langsung." />
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-  <!-- CSS -->
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/layout.css" />
   <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/pages.css" />
   <link rel="stylesheet" href="css/responsive.css" />
 
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <!-- Supabase JS SDK v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
 <body>
 
-  <!-- ===================================================================
-       NAVBAR
-  =================================================================== -->
   <nav class="navbar" id="navbar">
     <div class="nav-brand">
       <span class="nav-title">Dashboard IoT</span>
@@ -50,9 +43,6 @@
     </div>
   </nav>
 
-  <!-- ===================================================================
-       MAIN CONTENT – Router mount point
-  =================================================================== -->
   <main class="main-content" id="mainContent">
     <div class="page-loading" id="pageLoading">
       <div class="loading-spinner"></div>
@@ -60,14 +50,8 @@
     </div>
   </main>
 
-  <!-- ===================================================================
-       TOAST NOTIFICATION CONTAINER
-  =================================================================== -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- ===================================================================
-       JAVASCRIPT MODULES
-  =================================================================== -->
   <script src="js/supabase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/notifications.js"></script>
