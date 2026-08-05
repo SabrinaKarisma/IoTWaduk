@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard IoT Waduk</title>
+  <meta name="description" content="Dashboard monitoring kualitas air real-time dengan kontrol pintu air otomatis berbasis Fuzzy Logic. Pantau TDS, pH, suhu, dan level air secara langsung." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/layout.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+  <link rel="stylesheet" href="css/responsive.css" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Supabase JS SDK v2 -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+
+  <!-- ===================================================================
+       NAVBAR
+  =================================================================== -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-brand">
+      <span class="nav-title">Dashboard IoT</span>
+    </div>
+
+    <button class="nav-hamburger" id="navHamburger" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#home"    class="nav-link" data-page="home"    id="navHome">Home</a></li>
+      <li><a href="#control" class="nav-link" data-page="control" id="navControl">Control</a></li>
+      <li><a href="#grafik"  class="nav-link" data-page="grafik"  id="navGrafik">Grafik</a></li>
+      <li><a href="#data"    class="nav-link" data-page="data"    id="navData">Data</a></li>
+    </ul>
+
+    <div class="nav-status" id="navStatus">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-text" id="statusText">Menghubungkan...</span>
+    </div>
+  </nav>
+
+  <!-- ===================================================================
+       MAIN CONTENT – Router mount point
+  =================================================================== -->
+  <main class="main-content" id="mainContent">
+    <div class="page-loading" id="pageLoading">
+      <div class="loading-spinner"></div>
+      <p>Memuat dashboard...</p>
+    </div>
+  </main>
+
+  <!-- ===================================================================
+       TOAST NOTIFICATION CONTAINER
+  =================================================================== -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ===================================================================
+       JAVASCRIPT MODULES
+  =================================================================== -->
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/realtime.js"></script>
+  <script src="js/auto-delete.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/control.js"></script>
+  <script src="js/grafik.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
