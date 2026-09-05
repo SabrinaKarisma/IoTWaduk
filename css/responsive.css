@@ -35,7 +35,7 @@
     position: fixed;
     top: var(--navbar-height);
     left: 0; right: 0;
-    background: rgba(13,13,32,0.98);
+    background: rgba(254, 254, 255, 0.98);
     backdrop-filter: blur(16px);
     border-bottom: 1px solid var(--color-border);
     padding: var(--space-4);

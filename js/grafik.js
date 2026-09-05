@@ -6,7 +6,7 @@ function renderGrafik() {
     <div class="page" id="grafikPage">
       <div class="page-header">
         <h1 class="page-title">Grafik Data</h1>
-        <p class="page-subtitle">Visualisasi time-series parameter sensor dan output Fuzzy Logic</p>
+        <p class="page-subtitle">Visualisasi time-series level air, curah hujan, dan output Fuzzy Logic</p>
       </div>
 
       <!-- Time range selector -->
@@ -21,35 +21,23 @@ function renderGrafik() {
         <button class="btn btn-secondary btn-sm" onclick="refreshGrafik()">Refresh</button>
       </div>
 
-      <!-- Charts row 1: TDS + pH -->
+      <!-- Chart: Level Air -->
       <div class="chart-grid-2">
         <div class="chart-card">
-          <h3 style="color:var(--color-tds)">TDS</h3>
-          <div class="chart-container"><canvas id="chartTDS"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h3 style="color:var(--color-ph)">pH</h3>
-          <div class="chart-container"><canvas id="chartPH"></canvas></div>
-        </div>
-      </div>
-
-      <!-- Charts row 2: Suhu + Jarak -->
-      <div class="chart-grid-2" style="margin-top:16px">
-        <div class="chart-card">
-          <h3 style="color:var(--color-temp)">Suhu Air (°C)</h3>
-          <div class="chart-container"><canvas id="chartTemp"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <h3 style="color:var(--color-dist)">Level Air (cm)</h3>
+          <h3 style="color:var(--color-dist)">Level Air / Jarak (cm)</h3>
           <div class="chart-container"><canvas id="chartDist"></canvas></div>
         </div>
-      </div>
-
-      <!-- Charts row 3: Fuzzy + Gate Distribution -->
-      <div class="chart-grid-2" style="margin-top:16px">
         <div class="chart-card">
           <h3 style="color:var(--color-fuzzy)">Output Fuzzy Logic (°)</h3>
           <div class="chart-container"><canvas id="chartFuzzy"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Chart: Status Hujan + Distribusi Pintu -->
+      <div class="chart-grid-2" style="margin-top:16px">
+        <div class="chart-card">
+          <h3 style="color:var(--color-rain)">Status Hujan per Jam</h3>
+          <div class="chart-container"><canvas id="chartRain"></canvas></div>
         </div>
         <div class="chart-card">
           <h3>Distribusi Bukaan Pintu</h3>
@@ -69,12 +57,10 @@ function renderGrafik() {
 
 function setTimeRange(range) {
   grafikActiveRange = range;
-
   ['1h','6h','24h','7d'].forEach(r => {
     const btn = document.getElementById(`trBtn${r}`);
     if (btn) btn.classList.toggle('active', r === range);
   });
-
   window.charts.destroyAllCharts();
   loadGrafikData();
 }
@@ -94,7 +80,7 @@ async function loadGrafikData() {
 
     const { data, error } = await window.db
       .from('sensor_data')
-      .select('timestamp, tds_ppm, ph_level, temperature_c, distance_cm, fuzzy_output, gate_position')
+      .select('timestamp, distance_cm, rain_digital, fuzzy_output, gate_position')
       .gte('timestamp', since.toISOString())
       .order('timestamp', { ascending: true })
       .limit(limit);
@@ -106,50 +92,33 @@ async function loadGrafikData() {
       return;
     }
 
-    const rows = data.length > 300 ? downsample(data, 300) : data;
-
+    const rows   = data.length > 300 ? downsample(data, 300) : data;
     const labels = rows.map(r => window.utils.fmtTimeOnly(r.timestamp));
 
-    window.charts.createLineChart('chartTDS', {
-      label: 'TDS',
-      color: '#4488ff',
-      unit: 'ppm',
-      labels,
-      data: rows.map(r => r.tds_ppm),
-      min: 0
-    });
-    window.charts.createLineChart('chartPH', {
-      label: 'pH',
-      color: '#00e676',
-      unit: '',
-      labels,
-      data: rows.map(r => r.ph_level),
-      min: 0, max: 14
-    });
-    window.charts.createLineChart('chartTemp', {
-      label: 'Suhu',
-      color: '#ff8c00',
-      unit: '°C',
-      labels,
-      data: rows.map(r => r.temperature_c)
-    });
+    // Chart Level Air
     window.charts.createLineChart('chartDist', {
-      label: 'Jarak',
+      label: 'Level Air',
       color: '#b388ff',
-      unit: 'cm',
+      unit:  'cm',
       labels,
-      data: rows.map(r => r.distance_cm),
-      min: 0
+      data:  rows.map(r => r.distance_cm),
+      min:   0
     });
+
+    // Chart Fuzzy Output
     window.charts.createLineChart('chartFuzzy', {
       label: 'Fuzzy Output',
       color: '#ff6e88',
-      unit: '°',
+      unit:  '°',
       labels,
-      data: rows.map(r => r.fuzzy_output),
-      min: 0, max: 180
+      data:  rows.map(r => r.fuzzy_output),
+      min:   0, max: 180
     });
 
+    // Chart Hujan per jam (bar chart count)
+    buildRainBarChart(rows);
+
+    // Chart Distribusi Pintu
     buildGateBarChart(rows);
 
   } catch (e) {
@@ -158,6 +127,31 @@ async function loadGrafikData() {
   } finally {
     if (loading) loading.style.display = 'none';
   }
+}
+
+function buildRainBarChart(rows) {
+  const hourMap = {};
+  rows.forEach(r => {
+    const hour = new Date(r.timestamp).getHours();
+    const key  = `${String(hour).padStart(2,'0')}:00`;
+    if (!hourMap[key]) hourMap[key] = 0;
+    if (r.rain_digital) hourMap[key]++;
+  });
+
+  const labels = Object.keys(hourMap).sort();
+  const counts = labels.map(k => hourMap[k]);
+
+  window.charts.createBarChart('chartRain', {
+    labels,
+    datasets: [
+      {
+        label: 'Deteksi Hujan',
+        data: counts,
+        backgroundColor: 'rgba(82,196,255,0.7)',
+        borderRadius: 4
+      }
+    ]
+  });
 }
 
 function buildGateBarChart(rows) {
@@ -169,10 +163,10 @@ function buildGateBarChart(rows) {
     hourMap[key][r.gate_position || 0]++;
   });
 
-  const labels  = Object.keys(hourMap).sort();
-  const closed  = labels.map(k => hourMap[k][0]);
-  const half    = labels.map(k => hourMap[k][1]);
-  const full    = labels.map(k => hourMap[k][2]);
+  const labels = Object.keys(hourMap).sort();
+  const closed = labels.map(k => hourMap[k][0]);
+  const half   = labels.map(k => hourMap[k][1]);
+  const full   = labels.map(k => hourMap[k][2]);
 
   window.charts.createBarChart('chartGate', {
     labels,
@@ -187,11 +181,11 @@ function buildGateBarChart(rows) {
 function getRangeSince(range) {
   const now = new Date();
   switch (range) {
-    case '1h':  now.setHours(now.getHours()   - 1);  break;
-    case '6h':  now.setHours(now.getHours()   - 6);  break;
-    case '24h': now.setHours(now.getHours()   - 24); break;
-    case '7d':  now.setDate(now.getDate()     - 7);  break;
-    default:    now.setHours(now.getHours()   - 6);
+    case '1h':  now.setHours(now.getHours()  - 1);  break;
+    case '6h':  now.setHours(now.getHours()  - 6);  break;
+    case '24h': now.setHours(now.getHours()  - 24); break;
+    case '7d':  now.setDate(now.getDate()    - 7);  break;
+    default:    now.setHours(now.getHours()  - 6);
   }
   return now;
 }

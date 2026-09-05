@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard IoT Waduk</title>
-  <meta name="description" content="Dashboard monitoring kualitas air real-time dengan kontrol pintu air otomatis berbasis Fuzzy Logic. Pantau TDS, pH, suhu, dan level air secara langsung." />
+  <meta name="description"
+    content="Dashboard monitoring kualitas air real-time dengan kontrol pintu air otomatis berbasis Fuzzy Logic. Pantau TDS, pH, suhu, dan level air secara langsung." />
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
 
   <link rel="stylesheet" href="css/variables.css" />
   <link rel="stylesheet" href="css/layout.css" />
@@ -19,6 +23,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 </head>
+
 <body>
 
   <nav class="navbar" id="navbar">
@@ -31,10 +36,10 @@
     </button>
 
     <ul class="nav-links" id="navLinks">
-      <li><a href="#home"    class="nav-link" data-page="home"    id="navHome">Home</a></li>
+      <li><a href="#home" class="nav-link" data-page="home" id="navHome">Home</a></li>
       <li><a href="#control" class="nav-link" data-page="control" id="navControl">Control</a></li>
-      <li><a href="#grafik"  class="nav-link" data-page="grafik"  id="navGrafik">Grafik</a></li>
-      <li><a href="#data"    class="nav-link" data-page="data"    id="navData">Data</a></li>
+      <li><a href="#grafik" class="nav-link" data-page="grafik" id="navGrafik">Grafik</a></li>
+      <li><a href="#data" class="nav-link" data-page="data" id="navData">Data</a></li>
     </ul>
 
     <div class="nav-status" id="navStatus">
@@ -64,4 +69,5 @@
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

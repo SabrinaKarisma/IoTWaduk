@@ -1,10 +1,12 @@
 const DATA_PAGE_SIZE = 50;
 let dataCurrentPage  = 1;
 let dataTotalCount   = 0;
+let _rawBroadcastChannel = null;
+let _rawLastUpdate = null;
+let _rawOfflineTimer = null;
 
 const CSV_COLUMNS = [
-  'timestamp', 'tds_ppm', 'ph_level', 'temperature_c',
-  'distance_cm', 'rain_analog', 'rain_digital',
+  'timestamp', 'distance_cm', 'rain_digital',
   'servo1_pos', 'servo2_pos', 'servo3_pos',
   'fuzzy_output', 'gate_position'
 ];
@@ -15,7 +17,50 @@ function renderData() {
     <div class="page" id="dataPage">
       <div class="page-header">
         <h1 class="page-title">Data Sensor</h1>
-        <p class="page-subtitle">Seluruh data historis pembacaan sensor yang tersimpan di server</p>
+        <p class="page-subtitle">Monitor data real-time &amp; seluruh data historis pembacaan sensor</p>
+      </div>
+
+      <!-- Section: Data Sensor Live -->
+      <div class="raw-sensor-section" id="rawSensorSection">
+        <div class="raw-sensor-header">
+          <div class="raw-sensor-title">
+            <span class="raw-live-dot" id="rawLiveDot"></span>
+            Data Sensor Real-Time
+            <span class="raw-badge">LIVE</span>
+          </div>
+          <div class="raw-sensor-meta" id="rawLastUpdate">Menunggu data...</div>
+        </div>
+
+        <div class="raw-sensor-grid" id="rawSensorGrid">
+          <!-- Level Air -->
+          <div class="raw-sensor-card raw-sensor-card--small" id="rawCardDist">
+            <div class="raw-card-label">Level Air (JSN-SR04T)</div>
+            <div class="raw-col-value calibrated" id="rawDist" style="color:var(--color-dist)">—</div>
+            <div class="raw-col-unit">cm (ultrasonik)</div>
+            <div class="raw-card-accent" style="background:var(--color-dist)"></div>
+          </div>
+
+          <!-- Status Hujan -->
+          <div class="raw-sensor-card raw-sensor-card--small" id="rawCardRain">
+            <div class="raw-card-label">Status Hujan</div>
+            <div class="raw-col-value calibrated" id="rawRain" style="color:var(--color-rain)">—</div>
+            <div class="raw-col-unit" id="rawRainSub">Sensor Rain Digital</div>
+            <div class="raw-card-accent" style="background:var(--color-rain)"></div>
+          </div>
+
+          <!-- Fuzzy Output -->
+          <div class="raw-sensor-card raw-sensor-card--small" id="rawCardFuzzy">
+            <div class="raw-card-label">Output Fuzzy</div>
+            <div class="raw-col-value calibrated" id="rawFuzzy" style="color:var(--color-fuzzy)">—</div>
+            <div class="raw-col-unit" id="rawFuzzySub">derajat servo (0-180°)</div>
+            <div class="raw-card-accent" style="background:var(--color-fuzzy)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Data Historis -->
+      <div class="raw-historis-header">
+        <div class="section-title" style="margin-bottom:var(--space-3)">Data Historis</div>
       </div>
 
       <div class="data-toolbar">
@@ -38,20 +83,17 @@ function renderData() {
           <thead>
             <tr>
               <th>Waktu</th>
-              <th>TDS (ppm)</th>
-              <th>pH</th>
-              <th>Suhu (°C)</th>
-              <th>Jarak (cm)</th>
+              <th>Level Air (cm)</th>
               <th>Hujan</th>
               <th>Servo 1</th>
               <th>Servo 2</th>
               <th>Servo 3</th>
               <th>Fuzzy (°)</th>
-              <th>Pintu</th>
+              <th>Status Pintu</th>
             </tr>
           </thead>
           <tbody id="dataTableBody">
-            <tr><td colspan="11" style="text-align:center; padding:40px; color:var(--color-text-muted)">
+            <tr><td colspan="8" style="text-align:center; padding:40px; color:var(--color-text-muted)">
               <div class="loading-spinner" style="margin:0 auto 12px"></div>
               Memuat data...
             </td></tr>
@@ -73,6 +115,7 @@ function renderData() {
   `;
 
   loadDataPage(1);
+  subscribeRawBroadcast();
 }
 
 async function loadDataPage(page) {
@@ -81,7 +124,7 @@ async function loadDataPage(page) {
   const to   = from + DATA_PAGE_SIZE - 1;
 
   const tbody = document.getElementById('dataTableBody');
-  if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:24px; color:var(--color-text-muted)">
+  if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--color-text-muted)">
     <div class="loading-spinner" style="margin:0 auto 8px"></div>Memuat...
   </td></tr>`;
 
@@ -115,19 +158,20 @@ async function loadDataPage(page) {
   } catch (e) {
     console.error('[Data] Error:', e);
     const tbody = document.getElementById('dataTableBody');
-    if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:24px; color:var(--color-danger)">
+    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--color-danger)">
       Gagal memuat data: ${e.message}
     </td></tr>`;
     notify.error('Gagal memuat data tabel');
   }
 }
+
 function renderTable(rows) {
   const tbody = document.getElementById('dataTableBody');
   if (!tbody) return;
 
   if (rows.length === 0) {
     tbody.innerHTML = `
-      <tr><td colspan="11">
+      <tr><td colspan="8">
         <div class="empty-state" style="padding:40px">
           <div class="empty-state-icon">📭</div>
           <div class="empty-state-title">Tidak Ada Data</div>
@@ -137,18 +181,15 @@ function renderTable(rows) {
     return;
   }
 
-  const { fmt, fmtTime, gateLabel, gateColor, tdsColor, phColor } = window.utils;
+  const { fmt, fmtTime, gateLabel, gateColor } = window.utils;
 
   tbody.innerHTML = rows.map(r => {
     const gateClass = ['gate-closed', 'gate-half', 'gate-full'][r.gate_position] || '';
     return `
       <tr class="${gateClass}">
         <td>${fmtTime(r.timestamp)}</td>
-        <td class="cell-tds"  style="color:${tdsColor(r.tds_ppm)}">${fmt(r.tds_ppm, 0)}</td>
-        <td class="cell-ph"   style="color:${phColor(r.ph_level)}">${fmt(r.ph_level, 2)}</td>
-        <td class="cell-temp">${fmt(r.temperature_c, 1)}</td>
         <td class="cell-dist">${fmt(r.distance_cm, 0)}</td>
-        <td class="cell-rain">${r.rain_digital ? '🌧️' : '☀️'}</td>
+        <td class="cell-rain">${r.rain_digital ? '🌧️ Hujan' : '☀️ Cerah'}</td>
         <td>${r.servo1_pos ?? '—'}°</td>
         <td>${r.servo2_pos ?? '—'}°</td>
         <td>${r.servo3_pos ?? '—'}°</td>
@@ -165,6 +206,95 @@ function goToPage(page) {
   loadDataPage(page);
 }
 
+/* ============================================================
+   REALTIME – Subscribe ke data Supabase Realtime
+   ============================================================ */
+function subscribeRawBroadcast() {
+  if (_rawBroadcastChannel) {
+    window.db.removeChannel(_rawBroadcastChannel);
+    _rawBroadcastChannel = null;
+  }
+
+  // Subscribe ke tabel sensor_data via Realtime postgres_changes
+  _rawBroadcastChannel = window.db
+    .channel('realtime-sensor')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, (payload) => {
+      updateRawCards(payload.new);
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] Status:', status);
+      if (status === 'SUBSCRIBED') setRawStatus(true);
+      if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+        setRawStatus(false);
+        setTimeout(() => {
+          if (document.getElementById('rawSensorGrid')) subscribeRawBroadcast();
+        }, 5000);
+      }
+    });
+
+  if (_rawOfflineTimer) clearInterval(_rawOfflineTimer);
+  _rawOfflineTimer = setInterval(() => {
+    if (_rawLastUpdate === null) return;
+    const age = Date.now() - _rawLastUpdate;
+    setRawStatus(age < 15000);
+  }, 5000);
+}
+
+function unsubscribeRawBroadcast() {
+  if (_rawBroadcastChannel) {
+    window.db.removeChannel(_rawBroadcastChannel);
+    _rawBroadcastChannel = null;
+  }
+  if (_rawOfflineTimer) {
+    clearInterval(_rawOfflineTimer);
+    _rawOfflineTimer = null;
+  }
+  _rawLastUpdate = null;
+}
+
+function setRawStatus(isOnline) {
+  const dot = document.getElementById('rawLiveDot');
+  if (!dot) return;
+  dot.className = isOnline ? 'raw-live-dot live' : 'raw-live-dot offline';
+}
+
+function updateRawCards(d) {
+  _rawLastUpdate = Date.now();
+  setRawStatus(true);
+
+  const { fmt } = window.utils;
+
+  const metaEl = document.getElementById('rawLastUpdate');
+  if (metaEl) {
+    const now = new Date();
+    metaEl.textContent = `Update terakhir: ${
+      now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    }`;
+  }
+
+  // Level Air
+  const distEl = document.getElementById('rawDist');
+  if (distEl) distEl.textContent = d.distance_cm != null ? fmt(d.distance_cm, 1) + ' cm' : '—';
+
+  // Status Hujan
+  const rainEl  = document.getElementById('rawRain');
+  const rainSub = document.getElementById('rawRainSub');
+  if (rainEl) {
+    rainEl.textContent = d.rain_digital ? '🌧️ HUJAN' : '☀️ Cerah';
+    rainEl.style.color = d.rain_digital ? 'var(--color-danger)' : 'var(--color-success)';
+  }
+  if (rainSub) rainSub.textContent = d.rain_digital ? '⚠️ Notifikasi Telegram dikirim!' : 'Tidak ada hujan';
+
+  // Fuzzy Output
+  const fuzzyEl  = document.getElementById('rawFuzzy');
+  const fuzzySub = document.getElementById('rawFuzzySub');
+  if (fuzzyEl) fuzzyEl.textContent = d.fuzzy_output != null ? fmt(d.fuzzy_output, 1) + '°' : '—';
+  if (fuzzySub) fuzzySub.textContent = window.utils.gateLabel(d.gate_position);
+}
+
+/* ============================================================
+   CSV Download
+   ============================================================ */
 async function downloadCSV() {
   const btn = document.getElementById('btnDownload');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Mengunduh...'; }
@@ -179,15 +309,18 @@ async function downloadCSV() {
 
     const csv = window.utils.toCSV(data || [], CSV_COLUMNS);
     const filename = `sensor_data_${window.utils.fmtDateISO()}.csv`;
-    window.utils.downloadFile('\uFEFF' + csv, filename, 'text/csv;charset=utf-8'); 
+    window.utils.downloadFile('\uFEFF' + csv, filename, 'text/csv;charset=utf-8');
     notify.success(`CSV berhasil diunduh (${(data || []).length} baris)`);
   } catch (e) {
     notify.error('Gagal mengunduh CSV: ' + e.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Download CSV'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Download Data'; }
   }
 }
 
+/* ============================================================
+   Hapus Semua Data
+   ============================================================ */
 function confirmDeleteAll() {
   const overlay = document.createElement('div');
   overlay.className = 'confirm-overlay';
@@ -252,7 +385,7 @@ async function executeDeleteAll() {
     const { error } = await window.db
       .from('sensor_data')
       .delete()
-      .gte('id', 0);  
+      .gte('id', 0);
     if (error) throw error;
 
     notify.success('Semua data berhasil dihapus!');
@@ -268,10 +401,10 @@ async function executeDeleteAll() {
   }
 }
 
-window.dataModule   = { renderData };
+window.dataModule   = { renderData, destroyData: unsubscribeRawBroadcast };
 window.goToPage     = goToPage;
 window.downloadCSV  = downloadCSV;
-window.confirmDeleteAll  = confirmDeleteAll;
+window.confirmDeleteAll   = confirmDeleteAll;
 window.confirmDeleteStep2 = confirmDeleteStep2;
 window.closeConfirm = closeConfirm;
-window.executeDeleteAll  = executeDeleteAll;
+window.executeDeleteAll   = executeDeleteAll;

@@ -10,8 +10,9 @@ function renderHome() {
       <div class="home-hero">
         <h1>SISTEM MONITORING KENDALI PINTU AIR WADUK <span>Berbasis Fuzzy Sugeno</span></h1>
         <p>
-          Sistem monitoring real-time untuk parameter kualitas air (TDS, pH, suhu, level air)
-          dengan kontrol otomatis pintu air menggunakan algoritma Fuzzy Sugeno.
+          Sistem monitoring real-time level air dan curah hujan dengan kontrol otomatis
+          bukaan pintu air menggunakan algoritma Fuzzy Sugeno. Peringatan dini hujan
+          dikirim via Telegram secara otomatis.
         </p>
       </div>
 
@@ -46,11 +47,11 @@ function renderHome() {
           </div>
         </div>
         <div style="margin-left:auto; text-align:right">
-          <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:4px">Servo 1</div>
+          <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:4px">Pintu 1</div>
           <div class="badge badge-info" id="servoS1">—°</div>
-          <div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; margin-bottom:4px">Servo 2</div>
+          <div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; margin-bottom:4px">Pintu 2</div>
           <div class="badge badge-info" id="servoS2">—°</div>
-          <div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; margin-bottom:4px">Servo 3</div>
+          <div style="font-size:12px; color:var(--color-text-muted); margin-top:8px; margin-bottom:4px">Pintu 3</div>
           <div class="badge badge-info" id="servoS3">—°</div>
         </div>
       </div>
@@ -60,27 +61,27 @@ function renderHome() {
         <div class="section-title">Tentang Sistem</div>
         <div class="info-grid">
           <div class="info-card">
-            <div class="info-card-title">Sensor Kualitas Air</div>
+            <div class="info-card-title">Sensor Level Air</div>
             <div class="info-card-text">
-              3 sensor utama: TDS (kekeruhan partikel, 0-1000 ppm),
-              pH (keasaman air, 0-14), dan Suhu DS18B20 (°C).
-              Dibaca via ADC eksternal 16-bit ADS1115.
+              JSN-SR04T ultrasonik waterproof untuk mengukur level air (cm)
+              secara non-blocking. Data digunakan sebagai input utama Fuzzy Logic
+              untuk menentukan bukaan pintu waduk.
             </div>
           </div>
           <div class="info-card">
-            <div class="info-card-title">Sensor Lingkungan</div>
+            <div class="info-card-title">Sensor Hujan & Peringatan Dini</div>
             <div class="info-card-text">
-              JSN-SR04T ultrasonik waterproof untuk level air (cm),
-              dan sensor hujan dengan output analog & digital.
-              Semua pembacaan bersifat non-blocking.
+              Sensor rain digital mendeteksi curah hujan secara real-time.
+              Ketika hujan terdeteksi, ESP32 otomatis mengirim notifikasi
+              peringatan dini ke Telegram dalam &lt;1 menit.
             </div>
           </div>
           <div class="info-card">
             <div class="info-card-title">Fuzzy Logic Sugeno</div>
             <div class="info-card-text">
-              Algoritma Fuzzy Sugeno Order-0 dengan 9 rule (3 TDS × 3 Jarak).
+              Algoritma Fuzzy Sugeno Order-0 dengan 3 rule (Rendah/Sedang/Tinggi jarak).
               Output berupa derajat servo 0–180° yang mengontrol
-              3 buah servo MG996R secara serentak.
+              3 buah servo MG996R secara serentak sebagai aktuator pintu.
             </div>
           </div>
         </div>
@@ -111,12 +112,9 @@ function renderHome() {
 
 function buildSensorCards() {
   const sensors = [
-    { id: 'cardTds',   label: 'TDS',         unit: 'ppm',  color: 'var(--color-tds)' },
-    { id: 'cardPh',    label: 'pH',           unit: '',     color: 'var(--color-ph)'},
-    { id: 'cardTemp',  label: 'Suhu Air',     unit: '°C',   color: 'var(--color-temp)' },
-    { id: 'cardDist',  label: 'Level Air',    unit: 'cm',   color: 'var(--color-dist)' },
-    { id: 'cardRain',  label: 'Curah Hujan',  unit: '',     color: 'var(--color-rain)' },
-    { id: 'cardFuzzy', label: 'Output Fuzzy', unit: '°',    color: 'var(--color-fuzzy)' },
+    { id: 'cardDist',  label: 'Level Air',    unit: 'cm', color: 'var(--color-dist)' },
+    { id: 'cardRain',  label: 'Status Hujan', unit: '',   color: 'var(--color-rain)' },
+    { id: 'cardFuzzy', label: 'Output Fuzzy', unit: '°',  color: 'var(--color-fuzzy)' },
   ];
 
   return sensors.map(s => `
@@ -166,58 +164,45 @@ async function loadLatestSensorData() {
 }
 
 function updateSensorCards(row) {
-  const { fmt, tdsColor, phColor, mapRange, clamp } = window.utils;
+  const { fmt, mapRange, clamp } = window.utils;
 
-  // TDS
-  const tds = row.tds_ppm;
-  document.getElementById('cardTdsVal').textContent = fmt(tds, 0);
-  document.getElementById('cardTdsSub').textContent = tds < 300 ? 'Baik' : tds < 600 ? 'Sedang' : 'Buruk';
-  document.getElementById('cardTdsBar').style.width = clamp(mapRange(tds, 0, 1000, 0, 100), 0, 100) + '%';
-  document.getElementById('cardTdsVal').style.color = tdsColor(tds);
-
-  // pH
-  const ph = row.ph_level;
-  document.getElementById('cardPhVal').textContent = fmt(ph, 2);
-  document.getElementById('cardPhSub').textContent = ph >= 6 && ph <= 8 ? 'Normal' : ph >= 5 && ph <= 9 ? 'Perlu cek' : 'Kritis';
-  document.getElementById('cardPhBar').style.width = clamp(mapRange(ph, 0, 14, 0, 100), 0, 100) + '%';
-  document.getElementById('cardPhVal').style.color = phColor(ph);
-
-  // Suhu
-  const temp = row.temperature_c;
-  document.getElementById('cardTempVal').textContent = fmt(temp, 1);
-  document.getElementById('cardTempSub').textContent = temp < 25 ? 'Dingin' : temp < 30 ? 'Normal' : 'Panas';
-  document.getElementById('cardTempBar').style.width = clamp(mapRange(temp, 10, 45, 0, 100), 0, 100) + '%';
-
-  // Jarak/Level air
+  // Level Air (Jarak)
   const dist = row.distance_cm;
   document.getElementById('cardDistVal').textContent = fmt(dist, 0);
-  document.getElementById('cardDistSub').textContent = dist < 20 ? 'Rendah' : dist < 60 ? 'Sedang' : 'Tinggi';
-  document.getElementById('cardDistBar').style.width = clamp(mapRange(dist, 0, 100, 0, 100), 0, 100) + '%';
+  document.getElementById('cardDistSub').textContent =
+    dist < 20 ? 'Kritis Tinggi' : dist < 50 ? 'Sedang' : 'Rendah/Aman';
+  document.getElementById('cardDistBar').style.width =
+    clamp(mapRange(dist, 0, 100, 0, 100), 0, 100) + '%';
 
-  // Hujan
+  // Status Hujan
   const rainDig = row.rain_digital;
-  const rainAna = row.rain_analog;
   document.getElementById('cardRainVal').textContent = rainDig ? 'Hujan' : 'Cerah';
-  document.getElementById('cardRainSub').textContent = `Analog: ${fmt(rainAna, 0)} mV`;
+  document.getElementById('cardRainSub').textContent = rainDig
+    ? '⚠️ Peringatan dini aktif'
+    : 'Tidak ada hujan';
   document.getElementById('cardRainBar').style.width = rainDig ? '80%' : '10%';
+  document.getElementById('cardRainVal').style.color = rainDig
+    ? 'var(--color-danger)'
+    : 'var(--color-success)';
 
-  // Fuzzy output
+  // Fuzzy Output
   const fuzzy = row.fuzzy_output;
   document.getElementById('cardFuzzyVal').textContent = fmt(fuzzy, 1);
   document.getElementById('cardFuzzySub').textContent = window.utils.gateLabel(row.gate_position);
-  document.getElementById('cardFuzzyBar').style.width = clamp(mapRange(fuzzy, 0, 180, 0, 100), 0, 100) + '%';
+  document.getElementById('cardFuzzyBar').style.width =
+    clamp(mapRange(fuzzy, 0, 180, 0, 100), 0, 100) + '%';
 }
 
 function updateGateIndicator(row) {
   const { gateLabel, gateColor, fmt } = window.utils;
 
-  const fuzzy    = row.fuzzy_output || 0;
-  const cat      = row.gate_position ?? 0;
-  const color    = gateColor(cat);
-  const label    = gateLabel(cat);
-  const circ     = 201; // 2π × r = 2π × 32 ≈ 201
-  const pct      = Math.min(fuzzy / 180, 1);
-  const offset   = circ * (1 - pct);
+  const fuzzy  = row.fuzzy_output || 0;
+  const cat    = row.gate_position ?? 0;
+  const color  = gateColor(cat);
+  const label  = gateLabel(cat);
+  const circ   = 201;
+  const pct    = Math.min(fuzzy / 180, 1);
+  const offset = circ * (1 - pct);
 
   const arc = document.getElementById('gateArc');
   if (arc) {
@@ -296,7 +281,7 @@ async function loadDailySummary() {
 
     const { data: rows, error } = await window.db
       .from('sensor_data')
-      .select('tds_ppm, ph_level, temperature_c, distance_cm, gate_position')
+      .select('distance_cm, gate_position, rain_digital')
       .gte('timestamp', since.toISOString())
       .order('timestamp', { ascending: false })
       .limit(5000);
@@ -309,27 +294,23 @@ async function loadDailySummary() {
     }
 
     const { calcStats } = window.utils;
-    const tdsStats  = calcStats(rows.map(r => r.tds_ppm));
-    const phStats   = calcStats(rows.map(r => r.ph_level));
-    const tempStats = calcStats(rows.map(r => r.temperature_c));
-    const distStats = calcStats(rows.map(r => r.distance_cm));
+    const distStats  = calcStats(rows.map(r => r.distance_cm));
 
-    const gateClosed = rows.filter(r => r.gate_position === 0).length;
-    const gateHalf   = rows.filter(r => r.gate_position === 1).length;
-    const gateFull   = rows.filter(r => r.gate_position === 2).length;
-    const total      = rows.length;
+    const rainCount   = rows.filter(r => r.rain_digital === true).length;
+    const gateClosed  = rows.filter(r => r.gate_position === 0).length;
+    const gateHalf    = rows.filter(r => r.gate_position === 1).length;
+    const gateFull    = rows.filter(r => r.gate_position === 2).length;
+    const total       = rows.length;
 
     const summaryRow = {
       date: todayStr,
-      tds_avg: tdsStats.avg,  tds_min: tdsStats.min,  tds_max: tdsStats.max,
-      ph_avg:  phStats.avg,   ph_min:  phStats.min,   ph_max:  phStats.max,
-      temp_avg: tempStats.avg, temp_min: tempStats.min, temp_max: tempStats.max,
+      dist_avg: distStats.avg, dist_min: distStats.min, dist_max: distStats.max,
+      rain_count: rainCount,
       gate_closed_count: gateClosed,
       gate_half_count:   gateHalf,
       gate_full_count:   gateFull
     };
 
-    // Simpan ke cache
     await window.db.from('daily_summary').upsert(summaryRow, { onConflict: 'date' });
 
     renderSummary(summaryRow);
@@ -344,7 +325,7 @@ async function loadDailySummary() {
 
 function renderSummary(s) {
   const { fmt } = window.utils;
-  const total = (s.gate_closed_count || 0) + (s.gate_half_count || 0) + (s.gate_full_count || 0);
+  const total     = (s.gate_closed_count || 0) + (s.gate_half_count || 0) + (s.gate_full_count || 0);
   const pctClosed = total ? Math.round(s.gate_closed_count / total * 100) : 0;
   const pctHalf   = total ? Math.round(s.gate_half_count   / total * 100) : 0;
   const pctFull   = total ? Math.round(s.gate_full_count   / total * 100) : 0;
@@ -352,24 +333,17 @@ function renderSummary(s) {
   document.getElementById('summaryContent').innerHTML = `
     <div class="summary-stats">
       <div class="summary-stat-item">
-        <div class="summary-stat-label">TDS Rata-rata</div>
-        <div class="summary-stat-value" style="color:var(--color-tds)">${fmt(s.tds_avg,0)} ppm</div>
+        <div class="summary-stat-label">Level Air Rata-rata</div>
+        <div class="summary-stat-value" style="color:var(--color-dist)">${fmt(s.dist_avg, 0)} cm</div>
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">
-          Min: ${fmt(s.tds_min,0)} | Max: ${fmt(s.tds_max,0)}
+          Min: ${fmt(s.dist_min, 0)} | Max: ${fmt(s.dist_max, 0)}
         </div>
       </div>
       <div class="summary-stat-item">
-        <div class="summary-stat-label">pH Rata-rata</div>
-        <div class="summary-stat-value" style="color:var(--color-ph)">${fmt(s.ph_avg,2)}</div>
+        <div class="summary-stat-label">Kejadian Hujan</div>
+        <div class="summary-stat-value" style="color:var(--color-rain)">${s.rain_count || 0} data</div>
         <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">
-          Min: ${fmt(s.ph_min,2)} | Max: ${fmt(s.ph_max,2)}
-        </div>
-      </div>
-      <div class="summary-stat-item">
-        <div class="summary-stat-label">Suhu Rata-rata</div>
-        <div class="summary-stat-value" style="color:var(--color-temp)">${fmt(s.temp_avg,1)} °C</div>
-        <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">
-          Min: ${fmt(s.temp_min,1)} | Max: ${fmt(s.temp_max,1)}
+          Terdeteksi ${s.rain_count || 0}x hari ini
         </div>
       </div>
     </div>
