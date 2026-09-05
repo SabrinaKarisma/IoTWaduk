@@ -81,7 +81,7 @@ function phColor(ph) {
  * Label kategori bukaan pintu
  */
 function gateLabel(cat) {
-  return ['🔒 Tertutup', '⚡ Setengah', '✅ Terbuka Penuh'][cat] || '—';
+  return ['Tertutup', 'Setengah', 'Terbuka Penuh'][cat] || '—';
 }
 
 /**

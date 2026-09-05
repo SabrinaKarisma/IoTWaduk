@@ -21,39 +21,38 @@ function renderData() {
       </div>
 
       <!-- Section: Data Sensor Live -->
-      <div class="raw-sensor-section" id="rawSensorSection">
-        <div class="raw-sensor-header">
-          <div class="raw-sensor-title">
-            <span class="raw-live-dot" id="rawLiveDot"></span>
-            Data Sensor Real-Time
-            <span class="raw-badge">LIVE</span>
+      <div class="card" id="rawSensorSection" style="margin-bottom: var(--space-8); padding: var(--space-6); border-radius: var(--radius-xl);">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: var(--space-6); border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4);">
+          <div style="display:flex; align-items:center; gap:var(--space-3)">
+            <span id="rawLiveDot" style="width:12px; height:12px; border-radius:50%; background:var(--color-text-muted); display:inline-block; transition: all 0.3s ease;"></span>
+            <h2 style="font-size:16px; font-weight:600; margin:0; color:var(--color-text-primary); text-transform:uppercase; letter-spacing:0.5px;">Data Sensor Real-Time</h2>
           </div>
-          <div class="raw-sensor-meta" id="rawLastUpdate">Menunggu data...</div>
+          <div id="rawLastUpdate" style="font-size:12px; color:var(--color-text-muted); font-family:var(--font-mono); background:var(--color-bg-elevated); padding:4px 10px; border-radius:var(--radius-full);">Menunggu data...</div>
         </div>
 
-        <div class="raw-sensor-grid" id="rawSensorGrid">
+        <div class="sensor-grid" id="rawSensorGrid" style="margin-bottom: 0;">
           <!-- Level Air -->
-          <div class="raw-sensor-card raw-sensor-card--small" id="rawCardDist">
-            <div class="raw-card-label">Level Air (JSN-SR04T)</div>
-            <div class="raw-col-value calibrated" id="rawDist" style="color:var(--color-dist)">—</div>
-            <div class="raw-col-unit">cm (ultrasonik)</div>
-            <div class="raw-card-accent" style="background:var(--color-dist)"></div>
+          <div class="sensor-card" id="rawCardDist">
+            <div class="sensor-card-accent" style="background:var(--color-dist)"></div>
+            <div class="sensor-card-label">Level Air (JSN-SR04T)</div>
+            <div class="sensor-card-value" id="rawDist" style="color:var(--color-dist); font-size:28px; padding:4px 0;">—</div>
+            <div class="sensor-card-sub" style="margin-top:4px;">Sensor Ultrasonik</div>
           </div>
 
           <!-- Status Hujan -->
-          <div class="raw-sensor-card raw-sensor-card--small" id="rawCardRain">
-            <div class="raw-card-label">Status Hujan</div>
-            <div class="raw-col-value calibrated" id="rawRain" style="color:var(--color-rain)">—</div>
-            <div class="raw-col-unit" id="rawRainSub">Sensor Rain Digital</div>
-            <div class="raw-card-accent" style="background:var(--color-rain)"></div>
+          <div class="sensor-card" id="rawCardRain">
+            <div class="sensor-card-accent" style="background:var(--color-rain)"></div>
+            <div class="sensor-card-label">Status Hujan</div>
+            <div class="sensor-card-value" id="rawRain" style="color:var(--color-rain); font-size:28px; padding:4px 0;">—</div>
+            <div class="sensor-card-sub" id="rawRainSub" style="margin-top:4px;">Sensor Rain Digital</div>
           </div>
 
           <!-- Fuzzy Output -->
-          <div class="raw-sensor-card raw-sensor-card--small" id="rawCardFuzzy">
-            <div class="raw-card-label">Output Fuzzy</div>
-            <div class="raw-col-value calibrated" id="rawFuzzy" style="color:var(--color-fuzzy)">—</div>
-            <div class="raw-col-unit" id="rawFuzzySub">derajat servo (0-180°)</div>
-            <div class="raw-card-accent" style="background:var(--color-fuzzy)"></div>
+          <div class="sensor-card" id="rawCardFuzzy">
+            <div class="sensor-card-accent" style="background:var(--color-fuzzy)"></div>
+            <div class="sensor-card-label">Output Fuzzy</div>
+            <div class="sensor-card-value" id="rawFuzzy" style="color:var(--color-fuzzy); font-size:28px; padding:4px 0;">—</div>
+            <div class="sensor-card-sub" id="rawFuzzySub" style="margin-top:4px;">Derajat Servo (0-180°)</div>
           </div>
         </div>
       </div>
@@ -173,7 +172,7 @@ function renderTable(rows) {
     tbody.innerHTML = `
       <tr><td colspan="8">
         <div class="empty-state" style="padding:40px">
-          <div class="empty-state-icon">📭</div>
+          <div class="empty-state-icon"></div>
           <div class="empty-state-title">Tidak Ada Data</div>
           <div class="empty-state-text">Belum ada data sensor yang tersimpan</div>
         </div>
@@ -189,7 +188,7 @@ function renderTable(rows) {
       <tr class="${gateClass}">
         <td>${fmtTime(r.timestamp)}</td>
         <td class="cell-dist">${fmt(r.distance_cm, 0)}</td>
-        <td class="cell-rain">${r.rain_digital ? '🌧️ Hujan' : '☀️ Cerah'}</td>
+        <td class="cell-rain">${r.rain_digital ? 'Hujan' : 'Cerah'}</td>
         <td>${r.servo1_pos ?? '—'}°</td>
         <td>${r.servo2_pos ?? '—'}°</td>
         <td>${r.servo3_pos ?? '—'}°</td>
@@ -256,6 +255,8 @@ function setRawStatus(isOnline) {
   const dot = document.getElementById('rawLiveDot');
   if (!dot) return;
   dot.className = isOnline ? 'raw-live-dot live' : 'raw-live-dot offline';
+  dot.style.background = isOnline ? 'var(--color-success)' : 'var(--color-text-muted)';
+  dot.style.boxShadow = isOnline ? '0 0 8px var(--color-success)' : 'none';
 }
 
 function updateRawCards(d) {
@@ -280,10 +281,10 @@ function updateRawCards(d) {
   const rainEl  = document.getElementById('rawRain');
   const rainSub = document.getElementById('rawRainSub');
   if (rainEl) {
-    rainEl.textContent = d.rain_digital ? '🌧️ HUJAN' : '☀️ Cerah';
+    rainEl.textContent = d.rain_digital ? 'HUJAN' : 'Cerah';
     rainEl.style.color = d.rain_digital ? 'var(--color-danger)' : 'var(--color-success)';
   }
-  if (rainSub) rainSub.textContent = d.rain_digital ? '⚠️ Notifikasi Telegram dikirim!' : 'Tidak ada hujan';
+  if (rainSub) rainSub.textContent = d.rain_digital ? 'Notifikasi Telegram dikirim!' : 'Tidak ada hujan';
 
   // Fuzzy Output
   const fuzzyEl  = document.getElementById('rawFuzzy');
@@ -297,7 +298,7 @@ function updateRawCards(d) {
    ============================================================ */
 async function downloadCSV() {
   const btn = document.getElementById('btnDownload');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Mengunduh...'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Mengunduh...'; }
 
   try {
     const { data, error } = await window.db
@@ -348,7 +349,7 @@ function confirmDeleteStep2() {
   overlay2.id = 'confirmOverlay';
   overlay2.innerHTML = `
     <div class="confirm-box">
-      <div class="confirm-icon">🗑️</div>
+      <div class="confirm-icon"></div>
       <div class="confirm-title">Konfirmasi Akhir</div>
       <div class="confirm-text">
         Ketik <strong style="color:var(--color-danger)">HAPUS</strong> untuk mengkonfirmasi penghapusan permanen.
@@ -358,7 +359,7 @@ function confirmDeleteStep2() {
       </div>
       <div class="confirm-btns">
         <button class="btn btn-secondary" onclick="closeConfirm()">Batal</button>
-        <button class="btn btn-danger" id="btnFinalDelete" onclick="executeDeleteAll()" disabled>🗑️ Hapus Sekarang</button>
+        <button class="btn btn-danger" id="btnFinalDelete" onclick="executeDeleteAll()" disabled>Hapus Sekarang</button>
       </div>
     </div>
   `;

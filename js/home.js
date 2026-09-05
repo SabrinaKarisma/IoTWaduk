@@ -359,7 +359,7 @@ function renderSummary(s) {
       </div>
       <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--color-text-muted)">
         <span>Tertutup: ${pctClosed}% (${s.gate_closed_count})</span>
-        <span>⚡ Setengah: ${pctHalf}% (${s.gate_half_count})</span>
+        <span>Setengah: ${pctHalf}% (${s.gate_half_count})</span>
         <span>Penuh: ${pctFull}% (${s.gate_full_count})</span>
       </div>
     </div>
