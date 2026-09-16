@@ -64,9 +64,14 @@ function renderControl() {
               </div>
             </div>
 
+<<<<<<< Updated upstream
             <h3 style="margin-top:20px">Output Rule Base (derajat servo 0–180°)</h3>
             <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:8px">
               Jarak Rendah = air tinggi → buka penuh | Jarak Tinggi = air rendah → tutup
+=======
+            <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px; margin-top:8px">
+              Output Rule Base (derajat servo 0-180°) [TDS baris, Jarak kolom]
+>>>>>>> Stashed changes
             </div>
             <div class="calib-grid">
               <div class="form-group">
@@ -130,6 +135,32 @@ function buildServoWidget(n) {
   `;
 }
 
+<<<<<<< Updated upstream
+=======
+function buildRuleGrid() {
+  const labels = [
+    ['TDS Rendah + Jarak Rendah', 'TDS Rendah + Jarak Sedang', 'TDS Rendah + Jarak Tinggi'],
+    ['TDS Sedang + Jarak Rendah', 'TDS Sedang + Jarak Sedang', 'TDS Sedang + Jarak Tinggi'],
+    ['TDS Tinggi + Jarak Rendah', 'TDS Tinggi + Jarak Sedang', 'TDS Tinggi + Jarak Tinggi'],
+  ];
+  const defaults = [[60, 30, 45], [120, 90, 105], [150, 180, 165]];
+
+  let html = '';
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      html += `
+        <div class="calib-rule-item">
+          <div class="calib-rule-label">${labels[i][j]}</div>
+          <input type="number" class="form-input" id="rule_${i}_${j}"
+            min="0" max="180" value="${defaults[i][j]}" title="${labels[i][j]}">
+        </div>
+      `;
+    }
+  }
+  return html;
+}
+
+>>>>>>> Stashed changes
 async function sendServo(servoId, pos) {
   pos = Math.max(0, Math.min(180, Math.round(pos)));
   const statusEl = document.getElementById(`servoStatus${servoId}`);
@@ -137,15 +168,15 @@ async function sendServo(servoId, pos) {
 
   const slider  = document.getElementById(`servoSlider${servoId}`);
   const display = document.getElementById(`servoPos${servoId}Display`);
-  if (slider)  slider.value = pos;
+  if (slider) slider.value = pos;
   if (display) display.textContent = pos + '°';
 
   try {
     const { error } = await window.db.from('servo_commands').insert({
-      servo_id:        servoId,
+      servo_id: servoId,
       target_position: pos,
-      command_type:    'manual',
-      executed:        false
+      command_type: 'manual',
+      executed: false
     });
 
     if (error) throw error;
@@ -219,12 +250,25 @@ async function loadCalibration() {
       else if (el && def !== undefined) el.value = def;
     };
 
+<<<<<<< Updated upstream
     set('fzDistLow',  'fz_dist_low',  20);
     set('fzDistMid',  'fz_dist_mid',  50);
     set('fzDistHigh', 'fz_dist_high', 80);
     set('frLow',      'fr_low',       150);
     set('frMid',      'fr_mid',       90);
     set('frHigh',     'fr_high',      30);
+=======
+    set('calibTdsSlope', 'tds_slope', 500);
+    set('calibTdsOffset', 'tds_offset', 0);
+    set('calibPhSlope', 'ph_slope', -5.70);
+    set('calibPhOffset', 'ph_offset', 0);
+    set('fzTdsLow', 'fz_tds_low', 200);
+    set('fzTdsMid', 'fz_tds_mid', 500);
+    set('fzTdsHigh', 'fz_tds_high', 800);
+    set('fzDistLow', 'fz_dist_low', 20);
+    set('fzDistMid', 'fz_dist_mid', 50);
+    set('fzDistHigh', 'fz_dist_high', 80);
+>>>>>>> Stashed changes
 
     notify.info('Konfigurasi Fuzzy dimuat dari cloud');
   } catch (e) {
@@ -233,13 +277,25 @@ async function loadCalibration() {
 }
 
 async function saveCalibration() {
-  const btn    = document.getElementById('btnSaveCalib');
+  const btn = document.getElementById('btnSaveCalib');
   const status = document.getElementById('calibStatus');
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
   const entries = [
+<<<<<<< Updated upstream
     { config_key: 'fz_dist_low',  config_value: +document.getElementById('fzDistLow').value  },
     { config_key: 'fz_dist_mid',  config_value: +document.getElementById('fzDistMid').value  },
+=======
+    { config_key: 'tds_slope', config_value: +document.getElementById('calibTdsSlope').value },
+    { config_key: 'tds_offset', config_value: +document.getElementById('calibTdsOffset').value },
+    { config_key: 'ph_slope', config_value: +document.getElementById('calibPhSlope').value },
+    { config_key: 'ph_offset', config_value: +document.getElementById('calibPhOffset').value },
+    { config_key: 'fz_tds_low', config_value: +document.getElementById('fzTdsLow').value },
+    { config_key: 'fz_tds_mid', config_value: +document.getElementById('fzTdsMid').value },
+    { config_key: 'fz_tds_high', config_value: +document.getElementById('fzTdsHigh').value },
+    { config_key: 'fz_dist_low', config_value: +document.getElementById('fzDistLow').value },
+    { config_key: 'fz_dist_mid', config_value: +document.getElementById('fzDistMid').value },
+>>>>>>> Stashed changes
     { config_key: 'fz_dist_high', config_value: +document.getElementById('fzDistHigh').value },
     { config_key: 'fr_low',       config_value: +document.getElementById('frLow').value       },
     { config_key: 'fr_mid',       config_value: +document.getElementById('frMid').value       },
@@ -265,7 +321,7 @@ async function saveCalibration() {
 }
 
 window.controlModule = { renderControl };
-window.sendServo     = sendServo;
+window.sendServo = sendServo;
 window.sendAllServos = sendAllServos;
-window.adjustServo   = adjustServo;
+window.adjustServo = adjustServo;
 window.saveCalibration = saveCalibration;
