@@ -135,8 +135,6 @@ function buildServoWidget(n) {
   `;
 }
 
-<<<<<<< Updated upstream
-=======
 function buildRuleGrid() {
   const labels = [
     ['TDS Rendah + Jarak Rendah', 'TDS Rendah + Jarak Sedang', 'TDS Rendah + Jarak Tinggi'],
@@ -160,7 +158,7 @@ function buildRuleGrid() {
   return html;
 }
 
->>>>>>> Stashed changes
+
 async function sendServo(servoId, pos) {
   pos = Math.max(0, Math.min(180, Math.round(pos)));
   const statusEl = document.getElementById(`servoStatus${servoId}`);
@@ -250,14 +248,6 @@ async function loadCalibration() {
       else if (el && def !== undefined) el.value = def;
     };
 
-<<<<<<< Updated upstream
-    set('fzDistLow',  'fz_dist_low',  20);
-    set('fzDistMid',  'fz_dist_mid',  50);
-    set('fzDistHigh', 'fz_dist_high', 80);
-    set('frLow',      'fr_low',       150);
-    set('frMid',      'fr_mid',       90);
-    set('frHigh',     'fr_high',      30);
-=======
     set('calibTdsSlope', 'tds_slope', 500);
     set('calibTdsOffset', 'tds_offset', 0);
     set('calibPhSlope', 'ph_slope', -5.70);
@@ -268,7 +258,9 @@ async function loadCalibration() {
     set('fzDistLow', 'fz_dist_low', 20);
     set('fzDistMid', 'fz_dist_mid', 50);
     set('fzDistHigh', 'fz_dist_high', 80);
->>>>>>> Stashed changes
+    set('frLow',      'fr_low',       150);
+    set('frMid',      'fr_mid',       90);
+    set('frHigh',     'fr_high',      30);
 
     notify.info('Konfigurasi Fuzzy dimuat dari cloud');
   } catch (e) {
@@ -282,10 +274,6 @@ async function saveCalibration() {
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
   const entries = [
-<<<<<<< Updated upstream
-    { config_key: 'fz_dist_low',  config_value: +document.getElementById('fzDistLow').value  },
-    { config_key: 'fz_dist_mid',  config_value: +document.getElementById('fzDistMid').value  },
-=======
     { config_key: 'tds_slope', config_value: +document.getElementById('calibTdsSlope').value },
     { config_key: 'tds_offset', config_value: +document.getElementById('calibTdsOffset').value },
     { config_key: 'ph_slope', config_value: +document.getElementById('calibPhSlope').value },
@@ -295,7 +283,6 @@ async function saveCalibration() {
     { config_key: 'fz_tds_high', config_value: +document.getElementById('fzTdsHigh').value },
     { config_key: 'fz_dist_low', config_value: +document.getElementById('fzDistLow').value },
     { config_key: 'fz_dist_mid', config_value: +document.getElementById('fzDistMid').value },
->>>>>>> Stashed changes
     { config_key: 'fz_dist_high', config_value: +document.getElementById('fzDistHigh').value },
     { config_key: 'fr_low',       config_value: +document.getElementById('frLow').value       },
     { config_key: 'fr_mid',       config_value: +document.getElementById('frMid').value       },
