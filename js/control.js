@@ -4,7 +4,23 @@ function renderControl() {
     <div class="page" id="controlPage">
       <div class="page-header">
         <h1 class="page-title">Control Panel</h1>
-        <p class="page-subtitle">Kontrol manual pintu air dan konfigurasi parameter Fuzzy Logic</p>
+        <p class="page-subtitle">Kontrol manual pintu air, pompa air, dan konfigurasi parameter Fuzzy Logic</p>
+      </div>
+
+      <!-- ===== Pompa Air ===== -->
+      <div style="margin-bottom: 28px">
+        <div class="section-title">Kontrol Pompa Air</div>
+        <div class="pump-control-card" style="max-width: 420px">
+          <div class="pump-control-header">
+            <span class="pump-control-title">Pompa Air</span>
+            <span class="badge badge-muted" id="pumpBadge">Memuat...</span>
+          </div>
+          <button class="pump-toggle-btn pump-off" id="btnPump" onclick="togglePump()">
+
+            <span id="pumpLabel">OFF</span>
+          </button>
+          <div class="pump-status-text" id="pumpStatusText">Klik untuk menyalakan pompa</div>
+        </div>
       </div>
 
       <div class="control-layout">
@@ -64,14 +80,14 @@ function renderControl() {
               </div>
             </div>
 
-<<<<<<< Updated upstream
+
             <h3 style="margin-top:20px">Output Rule Base (derajat servo 0–180°)</h3>
             <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:8px">
               Jarak Rendah = air tinggi → buka penuh | Jarak Tinggi = air rendah → tutup
 =======
             <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px; margin-top:8px">
               Output Rule Base (derajat servo 0-180°) [TDS baris, Jarak kolom]
->>>>>>> Stashed changes
+
             </div>
             <div class="calib-grid">
               <div class="form-group">
@@ -104,6 +120,7 @@ function renderControl() {
   `;
 
   loadCalibration();
+  loadPumpState();
 }
 
 function buildServoWidget(n) {
@@ -307,8 +324,120 @@ async function saveCalibration() {
   }
 }
 
+// ============================================================
+//  POMPA AIR
+// ============================================================
+
+/** State lokal pompa (true = ON, false = OFF) */
+let _pumpState = false;
+
+/**
+ * Toggle pompa: kirim perintah ke Supabase tabel pump_commands.
+ * UI langsung berubah optimistis; status akan dikonfirmasi saat
+ * ESP32 mengeksekusi dan polling berikutnya membaca state.
+ */
+async function togglePump() {
+  const btn        = document.getElementById('btnPump');
+  const label      = document.getElementById('pumpLabel');
+  const icon       = document.getElementById('pumpIcon');
+  const badge      = document.getElementById('pumpBadge');
+  const statusText = document.getElementById('pumpStatusText');
+
+  if (!btn) return;
+
+  // Toggle state lokal
+  _pumpState = !_pumpState;
+
+  // Update UI optimistis
+  applyPumpUI(_pumpState);
+  statusText.textContent = 'Mengirim perintah...';
+  statusText.className   = 'pump-status-text';
+  btn.disabled = true;
+
+  try {
+    const { error } = await window.db.from('pump_commands').insert({
+      state:    _pumpState,
+      executed: false
+    });
+
+    if (error) throw error;
+
+    statusText.textContent = _pumpState
+      ? '✅ Perintah ON terkirim – menunggu ESP32'
+      : '✅ Perintah OFF terkirim – menunggu ESP32';
+    statusText.className = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
+    notify.success('Pompa ' + (_pumpState ? 'dinyalakan' : 'dimatikan'));
+  } catch (e) {
+    // Rollback UI jika gagal
+    _pumpState = !_pumpState;
+    applyPumpUI(_pumpState);
+    statusText.textContent = '❌ Gagal mengirim: ' + e.message;
+    statusText.className   = 'pump-status-text pump-status-err';
+    notify.error('Gagal kirim perintah pompa');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+/** Terapkan visual sesuai state pompa */
+function applyPumpUI(isOn) {
+  const btn   = document.getElementById('btnPump');
+  const label = document.getElementById('pumpLabel');
+  const icon  = document.getElementById('pumpIcon');
+  const badge = document.getElementById('pumpBadge');
+  if (!btn) return;
+
+  if (isOn) {
+    btn.className   = 'pump-toggle-btn pump-on';
+    label.textContent = 'ON';
+    icon.textContent  = '💧';
+    badge.textContent = 'AKTIF';
+    badge.className   = 'badge badge-success';
+  } else {
+    btn.className   = 'pump-toggle-btn pump-off';
+    label.textContent = 'OFF';
+    icon.textContent  = '💤';
+    badge.textContent = 'MATI';
+    badge.className   = 'badge badge-muted';
+  }
+}
+
+/** Muat state pompa terakhir dari Supabase saat halaman dibuka */
+async function loadPumpState() {
+  try {
+    const { data, error } = await window.db
+      .from('pump_commands')
+      .select('state, executed, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      // Belum ada data – default OFF
+      _pumpState = false;
+      applyPumpUI(false);
+      document.getElementById('pumpStatusText').textContent = 'Belum ada riwayat perintah';
+      return;
+    }
+
+    _pumpState = data.state;
+    applyPumpUI(_pumpState);
+
+    const statusText = document.getElementById('pumpStatusText');
+    if (!data.executed) {
+      statusText.textContent = 'Menunggu eksekusi ESP32...';
+    } else {
+      statusText.textContent = 'Status terakhir: pompa ' + (_pumpState ? 'ON' : 'OFF');
+      statusText.className   = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
+    }
+  } catch (e) {
+    console.warn('[Pump] Gagal load state:', e);
+  }
+}
+
 window.controlModule = { renderControl };
 window.sendServo = sendServo;
 window.sendAllServos = sendAllServos;
 window.adjustServo = adjustServo;
 window.saveCalibration = saveCalibration;
+window.togglePump = togglePump;
