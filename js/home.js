@@ -264,13 +264,18 @@ async function loadDailySummary() {
     new Date().toLocaleDateString('id-ID', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   try {
-    const { data: cached } = await window.db
+    const { data: cached, error: cacheErr } = await window.db
       .from('daily_summary')
       .select('*')
       .eq('date', todayStr)
       .maybeSingle();
 
-    if (cached) {
+    // 406 = tabel tidak ada atau tidak di-expose; skip cache dan hitung manual
+    if (cacheErr) {
+      console.warn('[Summary] daily_summary tidak tersedia:', cacheErr.message);
+    }
+
+    if (!cacheErr && cached) {
       renderSummary(cached);
       document.getElementById('summaryStatus').textContent = 'Dari cache';
       return;
