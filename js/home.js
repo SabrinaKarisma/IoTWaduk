@@ -145,7 +145,7 @@ async function loadLatestSensorData() {
       .select('*')
       .order('timestamp', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !data) return;
 
@@ -268,7 +268,7 @@ async function loadDailySummary() {
       .from('daily_summary')
       .select('*')
       .eq('date', todayStr)
-      .single();
+      .maybeSingle();
 
     if (cached) {
       renderSummary(cached);
