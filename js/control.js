@@ -254,7 +254,12 @@ async function loadCalibration() {
       .from('calibration_config')
       .select('config_key, config_value');
 
-    if (error || !data) return;
+    // Tabel belum dibuat (404) atau error lain — abaikan, gunakan nilai default
+    if (error) {
+      console.warn('[Control] calibration_config belum tersedia, pakai nilai default.');
+      return;
+    }
+    if (!data) return;
 
     const map = {};
     data.forEach(r => { map[r.config_key] = r.config_value; });
@@ -383,52 +388,53 @@ async function togglePump() {
 function applyPumpUI(isOn) {
   const btn   = document.getElementById('btnPump');
   const label = document.getElementById('pumpLabel');
-  const icon  = document.getElementById('pumpIcon');
   const badge = document.getElementById('pumpBadge');
   if (!btn) return;
 
   if (isOn) {
     btn.className   = 'pump-toggle-btn pump-on';
-    label.textContent = 'ON';
-    icon.textContent  = '💧';
-    badge.textContent = 'AKTIF';
-    badge.className   = 'badge badge-success';
+    if (label) label.textContent = 'ON';
+    if (badge) { badge.textContent = 'AKTIF'; badge.className = 'badge badge-success'; }
   } else {
     btn.className   = 'pump-toggle-btn pump-off';
-    label.textContent = 'OFF';
-    icon.textContent  = '💤';
-    badge.textContent = 'MATI';
-    badge.className   = 'badge badge-muted';
+    if (label) label.textContent = 'OFF';
+    if (badge) { badge.textContent = 'MATI'; badge.className = 'badge badge-muted'; }
   }
 }
 
 /** Muat state pompa terakhir dari Supabase saat halaman dibuka */
 async function loadPumpState() {
   try {
+    // Gunakan maybeSingle() agar tidak error 406 ketika tabel kosong
     const { data, error } = await window.db
       .from('pump_commands')
       .select('state, executed, created_at')
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) {
+    const statusTextEl = document.getElementById('pumpStatusText');
+
+    if (error) throw error;
+
+    if (!data) {
       // Belum ada data – default OFF
       _pumpState = false;
       applyPumpUI(false);
-      document.getElementById('pumpStatusText').textContent = 'Belum ada riwayat perintah';
+      if (statusTextEl) statusTextEl.textContent = 'Belum ada riwayat perintah';
       return;
     }
 
     _pumpState = data.state;
     applyPumpUI(_pumpState);
 
-    const statusText = document.getElementById('pumpStatusText');
-    if (!data.executed) {
-      statusText.textContent = 'Menunggu eksekusi ESP32...';
-    } else {
-      statusText.textContent = 'Status terakhir: pompa ' + (_pumpState ? 'ON' : 'OFF');
-      statusText.className   = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
+    if (statusTextEl) {
+      if (!data.executed) {
+        statusTextEl.textContent = 'Menunggu eksekusi ESP32...';
+      } else {
+        statusTextEl.textContent = 'Status terakhir: pompa ' + (_pumpState ? 'ON' : 'OFF');
+        statusTextEl.className   = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
+      }
     }
   } catch (e) {
     console.warn('[Pump] Gagal load state:', e);
