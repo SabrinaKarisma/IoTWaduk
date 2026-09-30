@@ -142,6 +142,17 @@
   align-items: start;
 }
 
+/* Baris atas halaman Control: Pompa Air + Mode Kendali
+   Desktop  : bersebelahan 2 kolom
+   Mobile   : menumpuk (Pompa Air di atas, Mode Kendali di bawah) */
+.control-top-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+  margin-bottom: var(--space-10);
+}
+
 .servo-grid {
   display: grid;
   grid-template-columns: 1fr;

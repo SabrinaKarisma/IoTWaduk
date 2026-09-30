@@ -765,3 +765,88 @@
 
 .pump-status-text.pump-status-on  { color: var(--color-success); }
 .pump-status-text.pump-status-err { color: var(--color-danger); }
+
+/* ============================================================
+   MODE CONTROL WIDGET (AUTO / MANUAL)
+   ============================================================ */
+.mode-control-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.mode-control-card:hover {
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-md);
+}
+
+.mode-switch {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.mode-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--space-5) var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--color-border-light);
+  background: var(--color-bg-elevated);
+  color: var(--color-text-muted);
+  font-family: var(--font-primary);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.mode-btn:active { transform: scale(0.97); }
+
+.mode-btn:hover {
+  border-color: var(--color-accent-primary);
+  color: var(--color-accent-primary);
+}
+
+.mode-btn-sub {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  opacity: 0.85;
+}
+
+/* Mode AUTO aktif (hijau) */
+.mode-btn.mode-btn-active-auto {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  border-color: #16a34a;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(22, 163, 74, 0.4);
+}
+
+/* Mode MANUAL aktif (oranye) */
+.mode-btn.mode-btn-active-manual {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  border-color: #d97706;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(217, 119, 6, 0.4);
+}
+
+.mode-status-text {
+  margin-top: var(--space-4);
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  min-height: 20px;
+  transition: color var(--transition-fast);
+}
+
+.mode-status-text.mode-status-ok  { color: var(--color-success); }
+.mode-status-text.mode-status-err { color: var(--color-danger); }

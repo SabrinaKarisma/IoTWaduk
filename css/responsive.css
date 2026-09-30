@@ -11,6 +11,11 @@
     grid-template-columns: 1fr;
   }
 
+  /* Pompa Air + Mode Kendali: menumpuk (mode di bawah pompa) */
+  .control-top-grid {
+    grid-template-columns: 1fr;
+  }
+
   /* Calib grid: 2 col */
   .calib-grid { grid-template-columns: 1fr; }
 

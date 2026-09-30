@@ -7,19 +7,46 @@ function renderControl() {
         <p class="page-subtitle">Kontrol manual pintu air, pompa air, dan konfigurasi parameter Fuzzy Logic</p>
       </div>
 
-      <!-- ===== Pompa Air ===== -->
-      <div style="margin-bottom: 28px">
-        <div class="section-title">Kontrol Pompa Air</div>
-        <div class="pump-control-card" style="max-width: 420px">
-          <div class="pump-control-header">
-            <span class="pump-control-title">Pompa Air</span>
-            <span class="badge badge-muted" id="pumpBadge">Memuat...</span>
-          </div>
-          <button class="pump-toggle-btn pump-off" id="btnPump" onclick="togglePump()">
+      <!-- ===== Pompa Air + Mode Kendali ===== -->
+      <div class="control-top-grid">
+        <!-- Pompa Air: kiri saat desktop, atas saat mobile -->
+        <div>
+          <div class="section-title">Kontrol Pompa Air</div>
+          <div class="pump-control-card">
+            <div class="pump-control-header">
+              <span class="pump-control-title">Pompa Air</span>
+              <span class="badge badge-muted" id="pumpBadge">Memuat...</span>
+            </div>
+            <button class="pump-toggle-btn pump-off" id="btnPump" onclick="togglePump()">
 
-            <span id="pumpLabel">OFF</span>
-          </button>
-          <div class="pump-status-text" id="pumpStatusText">Klik untuk menyalakan pompa</div>
+              <span id="pumpLabel">OFF</span>
+            </button>
+            <div class="pump-status-text" id="pumpStatusText">Klik untuk menyalakan pompa</div>
+          </div>
+        </div>
+
+        <!-- Mode Kendali: kanan saat desktop, bawah Pompa Air saat mobile -->
+        <div>
+          <div class="section-title">Mode Kendali Pintu Air</div>
+          <div class="mode-control-card">
+            <div class="pump-control-header">
+              <span class="pump-control-title">Mode Operasi</span>
+              <span class="badge badge-muted" id="modeBadge">Memuat...</span>
+            </div>
+
+            <div class="mode-switch">
+              <button class="mode-btn" id="btnModeAuto" onclick="setControlMode('auto')">
+                <span>AUTO</span>
+                <span class="mode-btn-sub">Fuzzy Sugeno</span>
+              </button>
+              <button class="mode-btn" id="btnModeManual" onclick="setControlMode('manual')">
+                <span>MANUAL</span>
+                <span class="mode-btn-sub">Perintah dashboard</span>
+              </button>
+            </div>
+
+            <div class="mode-status-text" id="modeStatusText">Memuat mode...</div>
+          </div>
         </div>
       </div>
 
@@ -27,6 +54,9 @@ function renderControl() {
         <!-- Kolom Kiri: Servo Control -->
         <div>
           <div class="section-title">Kontrol Servo Manual</div>
+          <div style="font-size:12px; color:var(--color-text-muted); margin:-8px 0 16px">
+            Skala sudut: <strong>0° = pintu tertutup</strong> · 90° = setengah · <strong>180° = pintu terbuka penuh</strong>
+          </div>
 
           <!-- Semua servo sekaligus -->
           <div class="all-servo-ctrl" style="margin-bottom:16px">
@@ -82,12 +112,8 @@ function renderControl() {
 
 
             <h3 style="margin-top:20px">Output Rule Base (derajat servo 0–180°)</h3>
-            <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:8px">
-              Jarak Rendah = air tinggi → buka penuh | Jarak Tinggi = air rendah → tutup
-=======
             <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px; margin-top:8px">
-              Output Rule Base (derajat servo 0-180°) [TDS baris, Jarak kolom]
-
+              Jarak Rendah = air tinggi → pintu terbuka | Jarak Tinggi = air rendah → pintu tertutup
             </div>
             <div class="calib-grid">
               <div class="form-group">
@@ -121,6 +147,7 @@ function renderControl() {
 
   loadCalibration();
   loadPumpState();
+  loadModeState();
 }
 
 function buildServoWidget(n) {
@@ -136,7 +163,7 @@ function buildServoWidget(n) {
       <div class="servo-presets" style="margin-top:12px">
         <button class="btn btn-danger btn-sm"   onclick="sendServo(${n}, 0)"   id="btnS${n}Close">Tutup</button>
         <button class="btn btn-secondary btn-sm" onclick="sendServo(${n}, 90)"  id="btnS${n}Half">Setengah</button>
-        <button class="btn btn-success btn-sm"  onclick="sendServo(${n}, 180)" id="btnS${n}Full">Full</button>
+        <button class="btn btn-success btn-sm"  onclick="sendServo(${n}, 180)" id="btnS${n}Full">Buka</button>
       </div>
       <div class="servo-adj" style="margin-top:8px">
         <button class="btn btn-secondary btn-sm" onclick="adjustServo(${n},-10)">-10</button>
@@ -178,6 +205,13 @@ function buildRuleGrid() {
 
 async function sendServo(servoId, pos) {
   pos = Math.max(0, Math.min(180, Math.round(pos)));
+
+  // Kalau masih AUTO, pindahkan ke MANUAL dulu supaya posisi servo ini tidak
+  // langsung ditimpa oleh Fuzzy Sugeno di ESP32.
+  if (_controlMode !== 'manual') {
+    await setControlMode('manual');
+  }
+
   const statusEl = document.getElementById(`servoStatus${servoId}`);
   if (statusEl) { statusEl.textContent = 'Mengirim...'; statusEl.className = 'servo-status sent'; }
 
@@ -447,9 +481,197 @@ async function loadPumpState() {
   }
 }
 
+// ============================================================
+//  MODE KENDALI (AUTO / MANUAL)
+//  Perintah dikirim ke tabel `mode_commands` di Supabase, lalu
+//  dipoll oleh ESP32 setiap 5 detik (checkModeCommand()).
+// ============================================================
+
+/** Mode yang sedang aktif di UI: 'auto' (Fuzzy Sugeno) atau 'manual' */
+let _controlMode = 'auto';
+/** Timer polling konfirmasi eksekusi mode oleh ESP32 */
+let _modePollTimer = null;
+
+/** Perbarui tampilan tombol & badge sesuai mode */
+function applyModeUI(mode) {
+  const btnAuto   = document.getElementById('btnModeAuto');
+  const btnManual = document.getElementById('btnModeManual');
+  const badgeEl   = document.getElementById('modeBadge');
+
+  if (btnAuto) {
+    btnAuto.className = 'mode-btn' + (mode === 'auto' ? ' mode-btn-active-auto' : '');
+  }
+  if (btnManual) {
+    btnManual.className = 'mode-btn' + (mode === 'manual' ? ' mode-btn-active-manual' : '');
+  }
+  if (badgeEl) {
+    badgeEl.textContent = mode === 'auto' ? 'AUTO' : 'MANUAL';
+    badgeEl.className   = 'badge ' + (mode === 'auto' ? 'badge-success' : 'badge-warning');
+  }
+}
+
+/**
+ * Minta ESP32 berpindah mode.
+ * @param {'auto'|'manual'} mode
+ * @param {Object} [opts] - { silent: boolean }
+ */
+async function setControlMode(mode, opts = {}) {
+  if (mode !== 'auto' && mode !== 'manual') return;
+
+  const statusEl = document.getElementById('modeStatusText');
+  const badgeEl  = document.getElementById('modeBadge');
+
+  // Sudah di mode ini -> tidak perlu kirim perintah baru
+  if (mode === _controlMode) {
+    applyModeUI(mode);
+    if (statusEl) {
+      statusEl.className   = 'mode-status-text mode-status-ok';
+      statusEl.textContent = mode === 'auto'
+        ? 'Mode AUTO aktif – pintu dikontrol Fuzzy Sugeno'
+        : 'Mode MANUAL aktif – pintu hanya dari perintah dashboard';
+    }
+    return;
+  }
+
+  const previousMode = _controlMode;
+
+  // UI optimistis
+  _controlMode = mode;
+  applyModeUI(mode);
+  if (badgeEl) badgeEl.className = 'badge badge-info';
+  if (statusEl) {
+    statusEl.className   = 'mode-status-text';
+    statusEl.textContent = 'Mengirim perintah ke ESP32...';
+  }
+
+  try {
+    const { data, error } = await window.db
+      .from('mode_commands')
+      .insert({ mode: mode, executed: false })
+      .select('id')
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!opts.silent) {
+      notify.success(mode === 'auto'
+        ? 'Mode AUTO dikirim – pintu akan dikontrol Fuzzy Sugeno'
+        : 'Mode MANUAL dikirim – pintu dikontrol dari dashboard');
+    }
+
+    if (data && data.id) pollModeExecution(data.id, statusEl);
+
+  } catch (e) {
+    console.error('[Mode] Gagal kirim perintah mode:', e);
+
+    // Rollback UI ke mode sebelumnya
+    _controlMode = previousMode;
+    applyModeUI(previousMode);
+
+    if (statusEl) {
+      statusEl.className   = 'mode-status-text mode-status-err';
+      statusEl.textContent = 'Gagal mengganti mode: ' + e.message;
+    }
+    notify.error('Gagal mengganti mode kendali');
+  }
+}
+
+/** Tunggu sampai ESP32 menandai perintah mode sebagai executed */
+function pollModeExecution(id, statusEl) {
+  if (_modePollTimer) { clearInterval(_modePollTimer); _modePollTimer = null; }
+
+  const start = Date.now();
+
+  _modePollTimer = setInterval(async () => {
+    if (Date.now() - start > 30000) {
+      clearInterval(_modePollTimer);
+      _modePollTimer = null;
+      if (statusEl) {
+        statusEl.className   = 'mode-status-text mode-status-err';
+        statusEl.textContent = 'Timeout – ESP32 belum merespons perintah mode';
+      }
+      return;
+    }
+
+    try {
+      const { data, error } = await window.db
+        .from('mode_commands')
+        .select('executed')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error || !data) return;
+
+      if (data.executed) {
+        clearInterval(_modePollTimer);
+        _modePollTimer = null;
+
+        applyModeUI(_controlMode);
+        if (statusEl) {
+          statusEl.className   = 'mode-status-text mode-status-ok';
+          statusEl.textContent = _controlMode === 'auto'
+            ? 'Diterapkan – pintu dikontrol otomatis oleh Fuzzy Sugeno'
+            : 'Diterapkan – pintu hanya bergerak dari perintah manual';
+        }
+      }
+    } catch { /* ignore */ }
+  }, 2000);
+}
+
+/** Muat mode terakhir dari Supabase saat halaman Control dibuka */
+async function loadModeState() {
+  const statusEl = document.getElementById('modeStatusText');
+
+  try {
+    const { data, error } = await window.db
+      .from('mode_commands')
+      .select('mode, executed, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      // Tabel belum dibuat -> pakai default AUTO
+      console.warn('[Mode] mode_commands belum tersedia:', error.message);
+      _controlMode = 'auto';
+      applyModeUI('auto');
+      if (statusEl) {
+        statusEl.className   = 'mode-status-text mode-status-err';
+        statusEl.textContent = 'Tabel mode_commands belum ada di Supabase';
+      }
+      return;
+    }
+
+    if (!data) {
+      _controlMode = 'auto';
+      applyModeUI('auto');
+      if (statusEl) statusEl.textContent = 'Default AUTO (Fuzzy Sugeno) – belum ada perintah mode';
+      return;
+    }
+
+    _controlMode = data.mode === 'manual' ? 'manual' : 'auto';
+    applyModeUI(_controlMode);
+
+    if (statusEl) {
+      if (!data.executed) {
+        statusEl.textContent = 'Menunggu eksekusi ESP32...';
+      } else {
+        statusEl.className   = 'mode-status-text mode-status-ok';
+        statusEl.textContent = _controlMode === 'auto'
+          ? 'Mode terakhir: AUTO (Fuzzy Sugeno)'
+          : 'Mode terakhir: MANUAL';
+      }
+    }
+  } catch (e) {
+    console.warn('[Mode] Gagal load mode:', e);
+  }
+}
+
 window.controlModule = { renderControl };
 window.sendServo = sendServo;
 window.sendAllServos = sendAllServos;
 window.adjustServo = adjustServo;
 window.saveCalibration = saveCalibration;
 window.togglePump = togglePump;
+window.setControlMode = setControlMode;
+window.loadModeState  = loadModeState;
