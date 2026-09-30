@@ -209,27 +209,40 @@ function goToPage(page) {
    REALTIME – Subscribe ke data Supabase Realtime
    ============================================================ */
 function subscribeRawBroadcast() {
-  if (_rawBroadcastChannel) {
-    window.db.removeChannel(_rawBroadcastChannel);
-    _rawBroadcastChannel = null;
-  }
+  // Bersihkan channel lama dulu supaya tidak ada channel ganda
+  unsubscribeRawBroadcast();
 
   // Subscribe ke tabel sensor_data via Realtime postgres_changes
-  _rawBroadcastChannel = window.db
-    .channel('realtime-sensor')
+  const channel = window.db.channel('realtime-sensor');
+  _rawBroadcastChannel = channel;
+
+  channel
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, (payload) => {
       updateRawCards(payload.new);
     })
     .subscribe((status) => {
       console.log('[Realtime] Status:', status);
+
+      // Abaikan callback dari channel lama yang sudah dibuang/diganti,
+      // supaya tidak terjadi loop SUBSCRIBED - CLOSED berkepanjangan.
+      if (_rawBroadcastChannel !== channel) return;
+
       if (status === 'SUBSCRIBED') setRawStatus(true);
-      if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+
+      // CLOSED = unsubscribe yang kita minta sendiri (pindah halaman) -> jangan reconnect.
+      // Hanya error/timeout yang perlu dicoba ulang.
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         setRawStatus(false);
+        _rawBroadcastChannel = null;
         setTimeout(() => {
           if (document.getElementById('rawSensorGrid')) subscribeRawBroadcast();
         }, 5000);
       }
     });
+
+  // Tampilkan pembacaan terakhir yang tersimpan agar kartu tidak kosong
+  // saat halaman baru dibuka.
+  loadRawLatest();
 
   if (_rawOfflineTimer) clearInterval(_rawOfflineTimer);
   _rawOfflineTimer = setInterval(() => {
@@ -239,11 +252,39 @@ function subscribeRawBroadcast() {
   }, 5000);
 }
 
-function unsubscribeRawBroadcast() {
-  if (_rawBroadcastChannel) {
-    window.db.removeChannel(_rawBroadcastChannel);
-    _rawBroadcastChannel = null;
+/**
+ * Ambil 1 baris terakhir dari sensor_data dan tampilkan di kartu real-time.
+ * Ini melengkapi Realtime: kartu langsung terisi walau belum ada INSERT baru.
+ */
+async function loadRawLatest() {
+  try {
+    const { data, error } = await window.db
+      .from('sensor_data')
+      .select('*')
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error || !data) return;
+
+    updateRawCards(data, { fromHistory: true });
+
+    // Dot "live" hanya menyala kalau data di DB memang masih segar
+    const age = Date.now() - new Date(data.timestamp).getTime();
+    _rawLastUpdate = age < 15000 ? Date.now() : null;
+    setRawStatus(age < 15000);
+
+  } catch (e) {
+    console.warn('[Data] Gagal memuat pembacaan terakhir:', e);
   }
+}
+
+function unsubscribeRawBroadcast() {
+  // Set null sebelum removeChannel agar callback CLOSED-nya diabaikan
+  const ch = _rawBroadcastChannel;
+  _rawBroadcastChannel = null;
+  if (ch) window.db.removeChannel(ch);
+
   if (_rawOfflineTimer) {
     clearInterval(_rawOfflineTimer);
     _rawOfflineTimer = null;
@@ -259,17 +300,21 @@ function setRawStatus(isOnline) {
   dot.style.boxShadow = isOnline ? '0 0 8px var(--color-success)' : 'none';
 }
 
-function updateRawCards(d) {
-  _rawLastUpdate = Date.now();
-  setRawStatus(true);
+function updateRawCards(d, opts = {}) {
+  // fromHistory = true -> nilai berasal dari baris terakhir di DB,
+  // bukan dari INSERT realtime, jadi jangan tandai sebagai "baru".
+  if (!opts.fromHistory) {
+    _rawLastUpdate = Date.now();
+    setRawStatus(true);
+  }
 
   const { fmt } = window.utils;
 
   const metaEl = document.getElementById('rawLastUpdate');
   if (metaEl) {
-    const now = new Date();
+    const ts = opts.fromHistory && d.timestamp ? new Date(d.timestamp) : new Date();
     metaEl.textContent = `Update terakhir: ${
-      now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      ts.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     }`;
   }
 

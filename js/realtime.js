@@ -1,4 +1,5 @@
 let _realtimeChannel = null;
+let _realtimeDestroyed = false;
 const _realtimeCallbacks = [];
 
 /**
@@ -6,13 +7,20 @@ const _realtimeCallbacks = [];
  * @param {Function} callback - fn(newRow) dipanggil setiap ada data baru
  */
 function subscribeToSensorData(callback) {
-  _realtimeCallbacks.push(callback);
+  if (typeof callback === 'function' && !_realtimeCallbacks.includes(callback)) {
+    _realtimeCallbacks.push(callback);
+  }
 
-  // Jika sudah subscribe, tidak perlu membuat channel baru
+  // Kalau channel sudah aktif (mis. halaman di-render ulang), callback baru
+  // cukup menumpang di channel yang sama.
   if (_realtimeChannel) return;
 
-  _realtimeChannel = window.db
-    .channel('sensor_data_realtime')
+  _realtimeDestroyed = false;
+
+  const channel = window.db.channel('sensor_data_realtime');
+  _realtimeChannel = channel;
+
+  channel
     .on(
       'postgres_changes',
       { event: 'INSERT', schema: 'public', table: 'sensor_data' },
@@ -26,18 +34,24 @@ function subscribeToSensorData(callback) {
     )
     .subscribe((status) => {
       console.log('[Realtime] Status:', status);
+
+      // Abaikan callback dari channel lama (mis. setelah pindah halaman)
+      if (_realtimeChannel !== channel) return;
+
       if (status === 'SUBSCRIBED') {
         console.log('[Realtime] Terhubung ke sensor_data');
+        return;
       }
-      if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+
+      // CLOSED = unsubscribe yang kita minta sendiri (pindah halaman),
+      // bukan gangguan koneksi -> tidak perlu reconnect.
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         console.warn('[Realtime] Koneksi terputus, mencoba reconnect...');
         _realtimeChannel = null;
         // Auto-reconnect setelah 5 detik
         setTimeout(() => {
-          if (_realtimeCallbacks.length > 0) {
-            const cb = _realtimeCallbacks[0];
-            _realtimeCallbacks.length = 0;
-            subscribeToSensorData(cb);
+          if (!_realtimeDestroyed && _realtimeCallbacks.length > 0) {
+            subscribeToSensorData();
           }
         }, 5000);
       }
@@ -48,11 +62,12 @@ function subscribeToSensorData(callback) {
  * Unsubscribe dan bersihkan semua callback
  */
 function unsubscribeAll() {
-  if (_realtimeChannel) {
-    window.db.removeChannel(_realtimeChannel);
-    _realtimeChannel = null;
-  }
+  const ch = _realtimeChannel;
+  // Set null lebih dulu supaya callback CLOSED dari channel ini diabaikan
+  _realtimeChannel  = null;
+  _realtimeDestroyed = true;
   _realtimeCallbacks.length = 0;
+  if (ch) window.db.removeChannel(ch);
 }
 
 window.realtime = { subscribeToSensorData, unsubscribeAll };

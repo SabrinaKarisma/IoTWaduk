@@ -231,14 +231,20 @@ async function pollServoExecution(servoId, statusEl) {
       return;
     }
     try {
-      const { data } = await window.db
+      // maybeSingle(): 0 baris -> data null TANPA error.
+      // single() akan melempar HTTP 406 (Not Acceptable) saat 0 baris,
+      // sehingga status langsung terbaca "Dieksekusi!" padahal belum.
+      const { data, error } = await window.db
         .from('servo_commands')
         .select('executed')
         .eq('servo_id', servoId)
         .eq('executed', false)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      // Error jaringan/tabel: coba lagi pada siklus berikutnya
+      if (error) return;
 
       if (!data) {
         clearInterval(interval);

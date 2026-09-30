@@ -2,7 +2,7 @@ const routes = {
   home:    { render: () => window.homeModule.renderHome(),    destroy: () => window.homeModule.destroyHome() },
   control: { render: () => window.controlModule.renderControl(), destroy: () => {} },
   grafik:  { render: () => window.grafikModule.renderGrafik(),  destroy: () => window.charts.destroyAllCharts() },
-  data:    { render: () => window.dataModule.renderData(),       destroy: () => {} }
+  data:    { render: () => window.dataModule.renderData(),       destroy: () => window.dataModule.destroyData() }
 };
 
 let currentPage  = null;
