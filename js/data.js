@@ -70,7 +70,7 @@ function renderData() {
           <button class="btn btn-secondary" onclick="downloadCSV()" id="btnDownload">
             Download Data
           </button>
-          <button class="btn btn-danger" onclick="confirmDeleteAll()" id="btnDelete">
+          <button class="btn btn-danger" onclick="executeDeleteAll()" id="btnDelete">
             Hapus Semua Data
           </button>
         </div>
@@ -212,33 +212,13 @@ function subscribeRawBroadcast() {
   // Bersihkan channel lama dulu supaya tidak ada channel ganda
   unsubscribeRawBroadcast();
 
-  // Subscribe ke tabel sensor_data via Realtime postgres_changes
-  const channel = window.db.channel('realtime-sensor');
-  _rawBroadcastChannel = channel;
+  // 1) REALTIME BROADCAST (data mentah ESP32 ~2 detik, TIDAK disimpan ke DB)
+  window.realtime.subscribeToRawSensor((d) => updateRawCards(d));
 
-  channel
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_data' }, (payload) => {
-      updateRawCards(payload.new);
-    })
-    .subscribe((status) => {
-      console.log('[Realtime] Status:', status);
+  // 2) Cadangan: INSERT ke tabel sensor_data (data tersimpan tiap 30 detik)
+  window.realtime.subscribeToSensorData((row) => updateRawCards(row, { fromHistory: true }));
 
-      // Abaikan callback dari channel lama yang sudah dibuang/diganti,
-      // supaya tidak terjadi loop SUBSCRIBED - CLOSED berkepanjangan.
-      if (_rawBroadcastChannel !== channel) return;
-
-      if (status === 'SUBSCRIBED') setRawStatus(true);
-
-      // CLOSED = unsubscribe yang kita minta sendiri (pindah halaman) -> jangan reconnect.
-      // Hanya error/timeout yang perlu dicoba ulang.
-      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-        setRawStatus(false);
-        _rawBroadcastChannel = null;
-        setTimeout(() => {
-          if (document.getElementById('rawSensorGrid')) subscribeRawBroadcast();
-        }, 5000);
-      }
-    });
+  setRawStatus(true);
 
   // Tampilkan pembacaan terakhir yang tersimpan agar kartu tidak kosong
   // saat halaman baru dibuka.
@@ -248,7 +228,7 @@ function subscribeRawBroadcast() {
   _rawOfflineTimer = setInterval(() => {
     if (_rawLastUpdate === null) return;
     const age = Date.now() - _rawLastUpdate;
-    setRawStatus(age < 15000);
+    setRawStatus(age < 45000);
   }, 5000);
 }
 
@@ -271,8 +251,8 @@ async function loadRawLatest() {
 
     // Dot "live" hanya menyala kalau data di DB memang masih segar
     const age = Date.now() - new Date(data.timestamp).getTime();
-    _rawLastUpdate = age < 15000 ? Date.now() : null;
-    setRawStatus(age < 15000);
+    _rawLastUpdate = age < 45000 ? Date.now() : null;
+    setRawStatus(age < 45000);
 
   } catch (e) {
     console.warn('[Data] Gagal memuat pembacaan terakhir:', e);
@@ -280,10 +260,8 @@ async function loadRawLatest() {
 }
 
 function unsubscribeRawBroadcast() {
-  // Set null sebelum removeChannel agar callback CLOSED-nya diabaikan
-  const ch = _rawBroadcastChannel;
-  _rawBroadcastChannel = null;
-  if (ch) window.db.removeChannel(ch);
+  // Berhenti berlangganan broadcast mentah + INSERT sensor_data
+  window.realtime.unsubscribeAll();
 
   if (_rawOfflineTimer) {
     clearInterval(_rawOfflineTimer);
@@ -378,64 +356,10 @@ async function downloadCSV() {
 
 /* ============================================================
    Hapus Semua Data
+   Menghapus seluruh data sensor langsung TANPA dialog konfirmasi.
+   Cukup tekan tombol "Hapus Semua Data" lalu muncul notifikasi sukses.
    ============================================================ */
-function confirmDeleteAll() {
-  const overlay = document.createElement('div');
-  overlay.className = 'confirm-overlay';
-  overlay.id = 'confirmOverlay';
-  overlay.innerHTML = `
-    <div class="confirm-box">
-      <div class="confirm-title">Hapus Semua Data?</div>
-      <div class="confirm-text">
-        Anda akan menghapus <strong style="color:var(--color-danger)">${dataTotalCount.toLocaleString('id-ID')} baris</strong> data sensor secara permanen.<br><br>
-        <span style="color:var(--color-warning)">PERINGATAN: Tindakan ini tidak dapat dibatalkan!</span>
-      </div>
-      <div class="confirm-btns">
-        <button class="btn btn-secondary" onclick="closeConfirm()">Batal</button>
-        <button class="btn btn-danger" onclick="confirmDeleteStep2()">Ya, Hapus Semua</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
-}
-
-function confirmDeleteStep2() {
-  closeConfirm();
-  const overlay2 = document.createElement('div');
-  overlay2.className = 'confirm-overlay';
-  overlay2.id = 'confirmOverlay';
-  overlay2.innerHTML = `
-    <div class="confirm-box">
-      <div class="confirm-icon"></div>
-      <div class="confirm-title">Konfirmasi Akhir</div>
-      <div class="confirm-text">
-        Ketik <strong style="color:var(--color-danger)">HAPUS</strong> untuk mengkonfirmasi penghapusan permanen.
-      </div>
-      <div class="form-group" style="margin-bottom:20px">
-        <input type="text" class="form-input" id="confirmDeleteInput" placeholder="Ketik HAPUS di sini..." autocomplete="off">
-      </div>
-      <div class="confirm-btns">
-        <button class="btn btn-secondary" onclick="closeConfirm()">Batal</button>
-        <button class="btn btn-danger" id="btnFinalDelete" onclick="executeDeleteAll()" disabled>Hapus Sekarang</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(overlay2);
-
-  const input  = document.getElementById('confirmDeleteInput');
-  const btnDel = document.getElementById('btnFinalDelete');
-  input.addEventListener('input', () => {
-    btnDel.disabled = input.value.trim() !== 'HAPUS';
-  });
-}
-
-function closeConfirm() {
-  const el = document.getElementById('confirmOverlay');
-  if (el) el.remove();
-}
-
 async function executeDeleteAll() {
-  closeConfirm();
   const btn = document.getElementById('btnDelete');
   if (btn) { btn.disabled = true; btn.textContent = 'Menghapus...'; }
 
@@ -462,7 +386,4 @@ async function executeDeleteAll() {
 window.dataModule   = { renderData, destroyData: unsubscribeRawBroadcast };
 window.goToPage     = goToPage;
 window.downloadCSV  = downloadCSV;
-window.confirmDeleteAll   = confirmDeleteAll;
-window.confirmDeleteStep2 = confirmDeleteStep2;
-window.closeConfirm = closeConfirm;
-window.executeDeleteAll   = executeDeleteAll;
+window.executeDeleteAll = executeDeleteAll;

@@ -408,15 +408,15 @@ async function togglePump() {
     if (error) throw error;
 
     statusText.textContent = _pumpState
-      ? '✅ Perintah ON terkirim – menunggu ESP32'
-      : '✅ Perintah OFF terkirim – menunggu ESP32';
+      ? 'Perintah ON terkirim – menunggu ESP32'
+      : 'Perintah OFF terkirim – menunggu ESP32';
     statusText.className = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
     notify.success('Pompa ' + (_pumpState ? 'dinyalakan' : 'dimatikan'));
   } catch (e) {
     // Rollback UI jika gagal
     _pumpState = !_pumpState;
     applyPumpUI(_pumpState);
-    statusText.textContent = '❌ Gagal mengirim: ' + e.message;
+    statusText.textContent = 'Gagal mengirim: ' + e.message;
     statusText.className = 'pump-status-text pump-status-err';
     notify.error('Gagal kirim perintah pompa');
   } finally {

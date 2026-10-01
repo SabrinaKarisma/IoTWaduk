@@ -104,6 +104,9 @@ function renderHome() {
     </div>
   `;
 
+  // Tampilan real-time (tidak disimpan): broadcast mentah dari ESP32 (~2 detik)
+  window.realtime.subscribeToRawSensor(onNewSensorData);
+  // Cadangan + data tersimpan: INSERT ke tabel sensor_data (tiap 30 detik)
   window.realtime.subscribeToSensorData(onNewSensorData);
   startOfflineDetection();
   loadLatestSensorData();
@@ -150,7 +153,7 @@ async function loadLatestSensorData() {
     if (error || !data) return;
 
     const age = Date.now() - new Date(data.timestamp).getTime();
-    if (age < 30000) {
+    if (age < 45000) {
       lastDataTimestamp = Date.now();
       updateOnlineStatus(true);
     }
@@ -249,7 +252,7 @@ function startOfflineDetection() {
   homeOfflineTimer = setInterval(() => {
     if (lastDataTimestamp === null) return;
     const age = Date.now() - lastDataTimestamp;
-    updateOnlineStatus(age < 30000);
+    updateOnlineStatus(age < 45000);
   }, 5000);
 }
 

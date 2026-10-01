@@ -2,6 +2,9 @@ let _realtimeChannel = null;
 let _realtimeDestroyed = false;
 const _realtimeCallbacks = [];
 
+let _rawChannel = null;
+const _rawCallbacks = [];
+
 /**
  * Subscribe ke tabel sensor_data, event INSERT
  * @param {Function} callback - fn(newRow) dipanggil setiap ada data baru
@@ -59,15 +62,68 @@ function subscribeToSensorData(callback) {
 }
 
 /**
- * Unsubscribe dan bersihkan semua callback
+ * Subscribe ke Realtime BROADCAST (data mentah dari ESP32, ~2 detik).
+ * Data ini TIDAK disimpan ke database, khusus untuk tampilan real-time
+ * agar penyimpanan Supabase tidak cepat penuh.
+ * @param {Function} callback - fn(payload) dipanggil setiap broadcast masuk
+ */
+function subscribeToRawSensor(callback) {
+  if (typeof callback === 'function' && !_rawCallbacks.includes(callback)) {
+    _rawCallbacks.push(callback);
+  }
+
+  if (_rawChannel) return;
+
+  _realtimeDestroyed = false;
+
+  const channel = window.db.channel('raw_sensor');
+  _rawChannel = channel;
+
+  channel
+    .on('broadcast', { event: 'raw_data' }, (message) => {
+      const row = (message && message.payload) ? message.payload : {};
+      _rawCallbacks.forEach(cb => {
+        try { cb(row); } catch (e) { console.error('[Realtime] Raw callback error:', e); }
+      });
+    })
+    .subscribe((status) => {
+      console.log('[Realtime] Raw status:', status);
+
+      if (_rawChannel !== channel) return;
+
+      if (status === 'SUBSCRIBED') {
+        console.log('[Realtime] Terhubung ke broadcast raw_sensor');
+        return;
+      }
+
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Realtime] Broadcast terputus, mencoba reconnect...');
+        _rawChannel = null;
+        setTimeout(() => {
+          if (!_realtimeDestroyed && _rawCallbacks.length > 0) {
+            subscribeToRawSensor();
+          }
+        }, 5000);
+      }
+    });
+}
+
+/**
+ * Unsubscribe semua channel (data tersimpan + broadcast) dan bersihkan callback
  */
 function unsubscribeAll() {
   const ch = _realtimeChannel;
   // Set null lebih dulu supaya callback CLOSED dari channel ini diabaikan
   _realtimeChannel  = null;
-  _realtimeDestroyed = true;
   _realtimeCallbacks.length = 0;
   if (ch) window.db.removeChannel(ch);
+
+  const rawCh = _rawChannel;
+  _rawChannel = null;
+  _rawCallbacks.length = 0;
+  if (rawCh) window.db.removeChannel(rawCh);
+
+  _realtimeDestroyed = true;
 }
 
-window.realtime = { subscribeToSensorData, unsubscribeAll };
+window.realtime = { subscribeToSensorData, subscribeToRawSensor, unsubscribeAll };
