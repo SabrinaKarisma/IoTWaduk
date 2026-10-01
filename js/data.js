@@ -6,7 +6,7 @@ let _rawLastUpdate = null;
 let _rawOfflineTimer = null;
 
 const CSV_COLUMNS = [
-  'timestamp', 'distance_cm', 'rain_digital',
+  'timestamp', 'distance_cm', 'rain_state',
   'servo1_pos', 'servo2_pos', 'servo3_pos',
   'fuzzy_output', 'gate_position'
 ];
@@ -188,7 +188,7 @@ function renderTable(rows) {
       <tr class="${gateClass}">
         <td>${fmtTime(r.timestamp)}</td>
         <td class="cell-dist">${fmt(r.distance_cm, 0)}</td>
-        <td class="cell-rain">${r.rain_digital ? 'Hujan' : 'Cerah'}</td>
+        <td class="cell-rain">${r.rain_state === 2 ? 'Hujan' : (r.rain_state === 1 ? 'Gerimis' : 'Kering')}</td>
         <td>${r.servo1_pos ?? '—'}°</td>
         <td>${r.servo2_pos ?? '—'}°</td>
         <td>${r.servo3_pos ?? '—'}°</td>
@@ -326,10 +326,22 @@ function updateRawCards(d, opts = {}) {
   const rainEl  = document.getElementById('rawRain');
   const rainSub = document.getElementById('rawRainSub');
   if (rainEl) {
-    rainEl.textContent = d.rain_digital ? 'HUJAN' : 'Cerah';
-    rainEl.style.color = d.rain_digital ? 'var(--color-danger)' : 'var(--color-success)';
+    if (d.rain_state === 2) {
+      rainEl.textContent = 'HUJAN';
+      rainEl.style.color = 'var(--color-danger)';
+    } else if (d.rain_state === 1) {
+      rainEl.textContent = 'GERIMIS';
+      rainEl.style.color = 'var(--color-warning)';
+    } else {
+      rainEl.textContent = 'KERING';
+      rainEl.style.color = 'var(--color-success)';
+    }
   }
-  if (rainSub) rainSub.textContent = d.rain_digital ? 'Notifikasi Telegram dikirim!' : 'Tidak ada hujan';
+  if (rainSub) {
+    if (d.rain_state === 2) rainSub.textContent = 'Notifikasi Telegram dikirim!';
+    else if (d.rain_state === 1) rainSub.textContent = 'Hujan rintik';
+    else rainSub.textContent = 'Tidak ada hujan';
+  }
 
   // Fuzzy Output
   const fuzzyEl  = document.getElementById('rawFuzzy');

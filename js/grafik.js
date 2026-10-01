@@ -80,7 +80,7 @@ async function loadGrafikData() {
 
     const { data, error } = await window.db
       .from('sensor_data')
-      .select('timestamp, distance_cm, rain_digital, fuzzy_output, gate_position')
+      .select('timestamp, distance_cm, rain_state, fuzzy_output, gate_position')
       .gte('timestamp', since.toISOString())
       .order('timestamp', { ascending: true })
       .limit(limit);
@@ -135,7 +135,7 @@ function buildRainBarChart(rows) {
     const hour = new Date(r.timestamp).getHours();
     const key  = `${String(hour).padStart(2,'0')}:00`;
     if (!hourMap[key]) hourMap[key] = 0;
-    if (r.rain_digital) hourMap[key]++;
+    if (r.rain_state === 2) hourMap[key]++;
   });
 
   const labels = Object.keys(hourMap).sort();

@@ -215,7 +215,7 @@ async function sendServo(servoId, pos) {
   const statusEl = document.getElementById(`servoStatus${servoId}`);
   if (statusEl) { statusEl.textContent = 'Mengirim...'; statusEl.className = 'servo-status sent'; }
 
-  const slider  = document.getElementById(`servoSlider${servoId}`);
+  const slider = document.getElementById(`servoSlider${servoId}`);
   const display = document.getElementById(`servoPos${servoId}Display`);
   if (slider) slider.value = pos;
   if (display) display.textContent = pos + '°';
@@ -248,7 +248,7 @@ async function sendAllServos(pos) {
 }
 
 function adjustServo(n, delta) {
-  const slider  = document.getElementById(`servoSlider${n}`);
+  const slider = document.getElementById(`servoSlider${n}`);
   const display = document.getElementById(`servoPos${n}Display`);
   if (!slider) return;
   const newVal = Math.max(0, Math.min(180, parseInt(slider.value) + delta));
@@ -257,7 +257,7 @@ function adjustServo(n, delta) {
 }
 
 async function pollServoExecution(servoId, statusEl) {
-  const start    = Date.now();
+  const start = Date.now();
   const interval = setInterval(async () => {
     if (Date.now() - start > 30000) {
       clearInterval(interval);
@@ -320,9 +320,9 @@ async function loadCalibration() {
     set('fzDistLow', 'fz_dist_low', 20);
     set('fzDistMid', 'fz_dist_mid', 50);
     set('fzDistHigh', 'fz_dist_high', 80);
-    set('frLow',      'fr_low',       150);
-    set('frMid',      'fr_mid',       90);
-    set('frHigh',     'fr_high',      30);
+    set('frLow', 'fr_low', 150);
+    set('frMid', 'fr_mid', 90);
+    set('frHigh', 'fr_high', 30);
 
     notify.info('Konfigurasi Fuzzy dimuat dari cloud');
   } catch (e) {
@@ -346,9 +346,9 @@ async function saveCalibration() {
     { config_key: 'fz_dist_low', config_value: +document.getElementById('fzDistLow').value },
     { config_key: 'fz_dist_mid', config_value: +document.getElementById('fzDistMid').value },
     { config_key: 'fz_dist_high', config_value: +document.getElementById('fzDistHigh').value },
-    { config_key: 'fr_low',       config_value: +document.getElementById('frLow').value       },
-    { config_key: 'fr_mid',       config_value: +document.getElementById('frMid').value       },
-    { config_key: 'fr_high',      config_value: +document.getElementById('frHigh').value      },
+    { config_key: 'fr_low', config_value: +document.getElementById('frLow').value },
+    { config_key: 'fr_mid', config_value: +document.getElementById('frMid').value },
+    { config_key: 'fr_high', config_value: +document.getElementById('frHigh').value },
   ];
 
   try {
@@ -382,10 +382,10 @@ let _pumpState = false;
  * ESP32 mengeksekusi dan polling berikutnya membaca state.
  */
 async function togglePump() {
-  const btn        = document.getElementById('btnPump');
-  const label      = document.getElementById('pumpLabel');
-  const icon       = document.getElementById('pumpIcon');
-  const badge      = document.getElementById('pumpBadge');
+  const btn = document.getElementById('btnPump');
+  const label = document.getElementById('pumpLabel');
+  const icon = document.getElementById('pumpIcon');
+  const badge = document.getElementById('pumpBadge');
   const statusText = document.getElementById('pumpStatusText');
 
   if (!btn) return;
@@ -396,12 +396,12 @@ async function togglePump() {
   // Update UI optimistis
   applyPumpUI(_pumpState);
   statusText.textContent = 'Mengirim perintah...';
-  statusText.className   = 'pump-status-text';
+  statusText.className = 'pump-status-text';
   btn.disabled = true;
 
   try {
     const { error } = await window.db.from('pump_commands').insert({
-      state:    _pumpState,
+      state: _pumpState,
       executed: false
     });
 
@@ -417,7 +417,7 @@ async function togglePump() {
     _pumpState = !_pumpState;
     applyPumpUI(_pumpState);
     statusText.textContent = '❌ Gagal mengirim: ' + e.message;
-    statusText.className   = 'pump-status-text pump-status-err';
+    statusText.className = 'pump-status-text pump-status-err';
     notify.error('Gagal kirim perintah pompa');
   } finally {
     btn.disabled = false;
@@ -426,17 +426,17 @@ async function togglePump() {
 
 /** Terapkan visual sesuai state pompa */
 function applyPumpUI(isOn) {
-  const btn   = document.getElementById('btnPump');
+  const btn = document.getElementById('btnPump');
   const label = document.getElementById('pumpLabel');
   const badge = document.getElementById('pumpBadge');
   if (!btn) return;
 
   if (isOn) {
-    btn.className   = 'pump-toggle-btn pump-on';
+    btn.className = 'pump-toggle-btn pump-on';
     if (label) label.textContent = 'ON';
     if (badge) { badge.textContent = 'AKTIF'; badge.className = 'badge badge-success'; }
   } else {
-    btn.className   = 'pump-toggle-btn pump-off';
+    btn.className = 'pump-toggle-btn pump-off';
     if (label) label.textContent = 'OFF';
     if (badge) { badge.textContent = 'MATI'; badge.className = 'badge badge-muted'; }
   }
@@ -473,7 +473,7 @@ async function loadPumpState() {
         statusTextEl.textContent = 'Menunggu eksekusi ESP32...';
       } else {
         statusTextEl.textContent = 'Status terakhir: pompa ' + (_pumpState ? 'ON' : 'OFF');
-        statusTextEl.className   = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
+        statusTextEl.className = 'pump-status-text' + (_pumpState ? ' pump-status-on' : '');
       }
     }
   } catch (e) {
@@ -494,9 +494,9 @@ let _modePollTimer = null;
 
 /** Perbarui tampilan tombol & badge sesuai mode */
 function applyModeUI(mode) {
-  const btnAuto   = document.getElementById('btnModeAuto');
+  const btnAuto = document.getElementById('btnModeAuto');
   const btnManual = document.getElementById('btnModeManual');
-  const badgeEl   = document.getElementById('modeBadge');
+  const badgeEl = document.getElementById('modeBadge');
 
   if (btnAuto) {
     btnAuto.className = 'mode-btn' + (mode === 'auto' ? ' mode-btn-active-auto' : '');
@@ -506,7 +506,7 @@ function applyModeUI(mode) {
   }
   if (badgeEl) {
     badgeEl.textContent = mode === 'auto' ? 'AUTO' : 'MANUAL';
-    badgeEl.className   = 'badge ' + (mode === 'auto' ? 'badge-success' : 'badge-warning');
+    badgeEl.className = 'badge ' + (mode === 'auto' ? 'badge-success' : 'badge-warning');
   }
 }
 
@@ -519,13 +519,13 @@ async function setControlMode(mode, opts = {}) {
   if (mode !== 'auto' && mode !== 'manual') return;
 
   const statusEl = document.getElementById('modeStatusText');
-  const badgeEl  = document.getElementById('modeBadge');
+  const badgeEl = document.getElementById('modeBadge');
 
   // Sudah di mode ini -> tidak perlu kirim perintah baru
   if (mode === _controlMode) {
     applyModeUI(mode);
     if (statusEl) {
-      statusEl.className   = 'mode-status-text mode-status-ok';
+      statusEl.className = 'mode-status-text mode-status-ok';
       statusEl.textContent = mode === 'auto'
         ? 'Mode AUTO aktif – pintu dikontrol Fuzzy Sugeno'
         : 'Mode MANUAL aktif – pintu hanya dari perintah dashboard';
@@ -540,7 +540,7 @@ async function setControlMode(mode, opts = {}) {
   applyModeUI(mode);
   if (badgeEl) badgeEl.className = 'badge badge-info';
   if (statusEl) {
-    statusEl.className   = 'mode-status-text';
+    statusEl.className = 'mode-status-text';
     statusEl.textContent = 'Mengirim perintah ke ESP32...';
   }
 
@@ -569,7 +569,7 @@ async function setControlMode(mode, opts = {}) {
     applyModeUI(previousMode);
 
     if (statusEl) {
-      statusEl.className   = 'mode-status-text mode-status-err';
+      statusEl.className = 'mode-status-text mode-status-err';
       statusEl.textContent = 'Gagal mengganti mode: ' + e.message;
     }
     notify.error('Gagal mengganti mode kendali');
@@ -587,7 +587,7 @@ function pollModeExecution(id, statusEl) {
       clearInterval(_modePollTimer);
       _modePollTimer = null;
       if (statusEl) {
-        statusEl.className   = 'mode-status-text mode-status-err';
+        statusEl.className = 'mode-status-text mode-status-err';
         statusEl.textContent = 'Timeout – ESP32 belum merespons perintah mode';
       }
       return;
@@ -608,7 +608,7 @@ function pollModeExecution(id, statusEl) {
 
         applyModeUI(_controlMode);
         if (statusEl) {
-          statusEl.className   = 'mode-status-text mode-status-ok';
+          statusEl.className = 'mode-status-text mode-status-ok';
           statusEl.textContent = _controlMode === 'auto'
             ? 'Diterapkan – pintu dikontrol otomatis oleh Fuzzy Sugeno'
             : 'Diterapkan – pintu hanya bergerak dari perintah manual';
@@ -636,7 +636,7 @@ async function loadModeState() {
       _controlMode = 'auto';
       applyModeUI('auto');
       if (statusEl) {
-        statusEl.className   = 'mode-status-text mode-status-err';
+        statusEl.className = 'mode-status-text mode-status-err';
         statusEl.textContent = 'Tabel mode_commands belum ada di Supabase';
       }
       return;
@@ -656,7 +656,7 @@ async function loadModeState() {
       if (!data.executed) {
         statusEl.textContent = 'Menunggu eksekusi ESP32...';
       } else {
-        statusEl.className   = 'mode-status-text mode-status-ok';
+        statusEl.className = 'mode-status-text mode-status-ok';
         statusEl.textContent = _controlMode === 'auto'
           ? 'Mode terakhir: AUTO (Fuzzy Sugeno)'
           : 'Mode terakhir: MANUAL';
@@ -674,4 +674,4 @@ window.adjustServo = adjustServo;
 window.saveCalibration = saveCalibration;
 window.togglePump = togglePump;
 window.setControlMode = setControlMode;
-window.loadModeState  = loadModeState;
+window.loadModeState = loadModeState;

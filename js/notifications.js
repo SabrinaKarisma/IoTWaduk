@@ -1,15 +1,15 @@
 const ToastTypes = {
   SUCCESS: 'success',
   WARNING: 'warning',
-  ERROR:   'error',
-  INFO:    'info'
+  ERROR: 'error',
+  INFO: 'info'
 };
 
 const TOAST_ICONS = {
-  success: '✅',
-  warning: '⚠️',
-  error:   '❌',
-  info:    'ℹ️'
+  success: '',
+  warning: '',
+  error: '',
+  info: ''
 };
 
 /**
@@ -25,7 +25,7 @@ function showToast(message, type = 'info', duration = 4000) {
   const toast = document.createElement('div');
   toast.className = `toast toast-${type}`;
   toast.innerHTML = `
-    <span class="toast-icon">${TOAST_ICONS[type] || 'ℹ️'}</span>
+    <span class="toast-icon">${TOAST_ICONS[type] || ''}</span>
     <span class="toast-msg">${message}</span>
   `;
 
@@ -42,9 +42,9 @@ function showToast(message, type = 'info', duration = 4000) {
 const notify = {
   success: (msg, dur) => showToast(msg, 'success', dur),
   warning: (msg, dur) => showToast(msg, 'warning', dur),
-  error:   (msg, dur) => showToast(msg, 'error',   dur),
-  info:    (msg, dur) => showToast(msg, 'info',    dur)
+  error: (msg, dur) => showToast(msg, 'error', dur),
+  info: (msg, dur) => showToast(msg, 'info', dur)
 };
 
-window.notify  = notify;
+window.notify = notify;
 window.showToast = showToast;

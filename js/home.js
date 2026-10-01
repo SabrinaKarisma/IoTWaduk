@@ -175,15 +175,28 @@ function updateSensorCards(row) {
     clamp(mapRange(dist, 0, 100, 0, 100), 0, 100) + '%';
 
   // Status Hujan
-  const rainDig = row.rain_digital;
-  document.getElementById('cardRainVal').textContent = rainDig ? 'Hujan' : 'Cerah';
-  document.getElementById('cardRainSub').textContent = rainDig
-    ? '⚠️ Peringatan dini aktif'
-    : 'Tidak ada hujan';
-  document.getElementById('cardRainBar').style.width = rainDig ? '80%' : '10%';
-  document.getElementById('cardRainVal').style.color = rainDig
-    ? 'var(--color-danger)'
-    : 'var(--color-success)';
+  const rainState = row.rain_state ?? 0;
+  let rainText = 'Kering';
+  let rainSubText = 'Tidak ada hujan';
+  let rainColor = 'var(--color-success)';
+  let barWidth = '10%';
+  
+  if (rainState === 1) {
+    rainText = 'Gerimis';
+    rainSubText = 'Hujan rintik';
+    rainColor = 'var(--color-warning)';
+    barWidth = '50%';
+  } else if (rainState === 2) {
+    rainText = 'Hujan';
+    rainSubText = '⚠️ Peringatan dini aktif';
+    rainColor = 'var(--color-danger)';
+    barWidth = '100%';
+  }
+  
+  document.getElementById('cardRainVal').textContent = rainText;
+  document.getElementById('cardRainSub').textContent = rainSubText;
+  document.getElementById('cardRainBar').style.width = barWidth;
+  document.getElementById('cardRainVal').style.color = rainColor;
 
   // Fuzzy Output
   const fuzzy = row.fuzzy_output;
@@ -286,7 +299,7 @@ async function loadDailySummary() {
 
     const { data: rows, error } = await window.db
       .from('sensor_data')
-      .select('distance_cm, gate_position, rain_digital')
+      .select('distance_cm, gate_position, rain_state')
       .gte('timestamp', since.toISOString())
       .order('timestamp', { ascending: false })
       .limit(5000);
@@ -301,7 +314,7 @@ async function loadDailySummary() {
     const { calcStats } = window.utils;
     const distStats  = calcStats(rows.map(r => r.distance_cm));
 
-    const rainCount   = rows.filter(r => r.rain_digital === true).length;
+    const rainCount   = rows.filter(r => r.rain_state === 2).length;
     const gateClosed  = rows.filter(r => r.gate_position === 0).length;
     const gateHalf    = rows.filter(r => r.gate_position === 1).length;
     const gateFull    = rows.filter(r => r.gate_position === 2).length;
