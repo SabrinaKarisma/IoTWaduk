@@ -196,8 +196,12 @@ function updateSensorCards(row) {
     barWidth = '100%';
   }
   
+  const rainVoltTxt = (row.rain_volt != null)
+    ? `${fmt(row.rain_volt, 3)} V` + (row.rain_adc != null ? ` · ADC ${Math.round(row.rain_adc)}` : '')
+    : null;
+
   document.getElementById('cardRainVal').textContent = rainText;
-  document.getElementById('cardRainSub').textContent = rainSubText;
+  document.getElementById('cardRainSub').textContent = rainVoltTxt || rainSubText;
   document.getElementById('cardRainBar').style.width = barWidth;
   document.getElementById('cardRainVal').style.color = rainColor;
 

@@ -4,7 +4,7 @@ function renderControl() {
     <div class="page" id="controlPage">
       <div class="page-header">
         <h1 class="page-title">Control Panel</h1>
-        <p class="page-subtitle">Kontrol manual pintu air, pompa air, dan konfigurasi parameter Fuzzy Logic</p>
+        <p class="page-subtitle">Kontrol manual pintu air &amp; pompa, serta kalibrasi sensor jarak, sensor hujan, dan parameter Fuzzy Logic</p>
       </div>
 
       <!-- ===== Pompa Air + Mode Kendali ===== -->
@@ -85,10 +85,78 @@ function renderControl() {
 
         <!-- Kolom Kanan: Parameter Fuzzy -->
         <div>
-          <div class="section-title">Parameter Fuzzy Logic</div>
+          <div class="section-title">Kalibrasi &amp; Parameter Sensor</div>
+
+          <!-- Kalibrasi sensor jarak (ultrasonik) -->
+          <div class="calib-section" style="margin-bottom:16px">
+            <h3 style="margin-top:0">Kalibrasi Sensor Jarak (JSN-SR04T)</h3>
+            <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px">
+              Filter &amp; batas jangkauan pembacaan jarak / level air.
+            </div>
+            <div class="calib-grid">
+              <div class="form-group">
+                <label class="form-label">Jarak Valid Minimum (cm)</label>
+                <input type="number" class="form-input" id="calDistMin" step="1" min="0" value="20">
+                <span class="form-hint">Di bawah ini diabaikan. Default: 20</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Jarak Valid Maksimum (cm)</label>
+                <input type="number" class="form-input" id="calDistMax" step="1" min="0" value="600">
+                <span class="form-hint">Di atas ini diabaikan. Default: 600</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Kehalusan Filter (EMA &alpha;)</label>
+                <input type="number" class="form-input" id="calDistAlpha" step="0.05" min="0.05" max="1" value="0.35">
+                <span class="form-hint">0.05-1. Kecil = stabil tapi lambat. Default: 0.35</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Jumlah Sampel Median</label>
+                <input type="number" class="form-input" id="calDistWin" step="1" min="3" max="15" value="7">
+                <span class="form-hint">Buang spike. 3-15. Default: 7</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kalibrasi sensor hujan (analog) -->
+          <div class="calib-section" style="margin-bottom:16px">
+            <h3 style="margin-top:0">Kalibrasi Sensor Hujan (Analog)</h3>
+            <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px">
+              Ambang tegangan (Volt) penentu status hujan.
+            </div>
+            <div class="calib-grid">
+              <div class="form-group">
+                <label class="form-label">Polaritas Sensor</label>
+                <select class="form-select" id="calRainPolarity">
+                  <option value="1">Basah = tegangan TINGGI</option>
+                  <option value="0">Basah = tegangan RENDAH</option>
+                </select>
+                <span class="form-hint">Sesuaikan dengan modul sensor</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Jumlah Sampel Rata-rata</label>
+                <input type="number" class="form-input" id="calRainWin" step="1" min="2" max="16" value="8">
+                <span class="form-hint">2-16. Default: 8</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Batas Kering -&gt; Gerimis (V)</label>
+                <input type="number" class="form-input" id="calRainThKering" step="0.05" min="0" value="1.5">
+                <span class="form-hint">Default: 1.5 V</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Batas Gerimis -&gt; Hujan (V)</label>
+                <input type="number" class="form-input" id="calRainThHujan" step="0.05" min="0" value="2.5">
+                <span class="form-hint">Default: 2.5 V</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Histeresis (V)</label>
+                <input type="number" class="form-input" id="calRainHyst" step="0.05" min="0" value="0.15">
+                <span class="form-hint">Cegah status berkedip. Default: 0.15</span>
+              </div>
+            </div>
+          </div>
 
           <div class="calib-section">
-            <h3>Membership Function Jarak (cm)</h3>
+            <h3 style="margin-top:0">Fuzzy: Membership Function Jarak (cm)</h3>
             <div style="font-size:12px; color:var(--color-text-muted); margin-bottom:12px">
               Batas zona keanggotaan level air untuk input Fuzzy Logic
             </div>
@@ -306,25 +374,33 @@ async function loadCalibration() {
 
     const set = (id, key, def) => {
       const el = document.getElementById(id);
-      if (el && map[key] !== undefined) el.value = map[key];
-      else if (el && def !== undefined) el.value = def;
+      if (!el) return;
+      if (map[key] !== undefined && map[key] !== null) el.value = map[key];
+      else if (def !== undefined) el.value = def;
     };
 
-    set('calibTdsSlope', 'tds_slope', 500);
-    set('calibTdsOffset', 'tds_offset', 0);
-    set('calibPhSlope', 'ph_slope', -5.70);
-    set('calibPhOffset', 'ph_offset', 0);
-    set('fzTdsLow', 'fz_tds_low', 200);
-    set('fzTdsMid', 'fz_tds_mid', 500);
-    set('fzTdsHigh', 'fz_tds_high', 800);
-    set('fzDistLow', 'fz_dist_low', 20);
-    set('fzDistMid', 'fz_dist_mid', 50);
-    set('fzDistHigh', 'fz_dist_high', 80);
-    set('frLow', 'fr_low', 150);
-    set('frMid', 'fr_mid', 90);
-    set('frHigh', 'fr_high', 30);
+    // Sensor jarak (ultrasonik)
+    set('calDistMin',   'dist_min_valid', 20);
+    set('calDistMax',   'dist_max_valid', 600);
+    set('calDistAlpha', 'dist_ema_alpha', 0.35);
+    set('calDistWin',   'dist_filter_window', 7);
 
-    notify.info('Konfigurasi Fuzzy dimuat dari cloud');
+    // Sensor hujan (analog)
+    set('calRainPolarity', 'rain_wet_is_high', 1);
+    set('calRainWin',      'rain_filter_window', 8);
+    set('calRainThKering', 'rain_th_kering', 1.5);
+    set('calRainThHujan',  'rain_th_hujan', 2.5);
+    set('calRainHyst',     'rain_hyst', 0.15);
+
+    // Fuzzy logic
+    set('fzDistLow',  'fz_dist_low', 20);
+    set('fzDistMid',  'fz_dist_mid', 50);
+    set('fzDistHigh', 'fz_dist_high', 80);
+    set('frLow',  'fr_dist_0', 150);
+    set('frMid',  'fr_dist_1', 90);
+    set('frHigh', 'fr_dist_2', 30);
+
+    notify.info('Kalibrasi dimuat dari cloud');
   } catch (e) {
     console.error('[Control] Gagal load kalibrasi:', e);
   }
@@ -335,21 +411,38 @@ async function saveCalibration() {
   const status = document.getElementById('calibStatus');
   if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
 
+  const num = (id, def) => {
+    const el = document.getElementById(id);
+    if (!el) return def;
+    const v = parseFloat(el.value);
+    return isNaN(v) ? def : v;
+  };
+
   const entries = [
-    { config_key: 'tds_slope', config_value: +document.getElementById('calibTdsSlope').value },
-    { config_key: 'tds_offset', config_value: +document.getElementById('calibTdsOffset').value },
-    { config_key: 'ph_slope', config_value: +document.getElementById('calibPhSlope').value },
-    { config_key: 'ph_offset', config_value: +document.getElementById('calibPhOffset').value },
-    { config_key: 'fz_tds_low', config_value: +document.getElementById('fzTdsLow').value },
-    { config_key: 'fz_tds_mid', config_value: +document.getElementById('fzTdsMid').value },
-    { config_key: 'fz_tds_high', config_value: +document.getElementById('fzTdsHigh').value },
-    { config_key: 'fz_dist_low', config_value: +document.getElementById('fzDistLow').value },
-    { config_key: 'fz_dist_mid', config_value: +document.getElementById('fzDistMid').value },
-    { config_key: 'fz_dist_high', config_value: +document.getElementById('fzDistHigh').value },
-    { config_key: 'fr_low', config_value: +document.getElementById('frLow').value },
-    { config_key: 'fr_mid', config_value: +document.getElementById('frMid').value },
-    { config_key: 'fr_high', config_value: +document.getElementById('frHigh').value },
+    // Sensor jarak (ultrasonik)
+    { config_key: 'dist_min_valid',     config_value: num('calDistMin', 20) },
+    { config_key: 'dist_max_valid',     config_value: num('calDistMax', 600) },
+    { config_key: 'dist_ema_alpha',     config_value: num('calDistAlpha', 0.35) },
+    { config_key: 'dist_filter_window', config_value: num('calDistWin', 7) },
+    // Sensor hujan (analog)
+    { config_key: 'rain_wet_is_high',   config_value: num('calRainPolarity', 1) },
+    { config_key: 'rain_filter_window', config_value: num('calRainWin', 8) },
+    { config_key: 'rain_th_kering',     config_value: num('calRainThKering', 1.5) },
+    { config_key: 'rain_th_hujan',      config_value: num('calRainThHujan', 2.5) },
+    { config_key: 'rain_hyst',          config_value: num('calRainHyst', 0.15) },
+    // Fuzzy logic
+    { config_key: 'fz_dist_low',  config_value: num('fzDistLow', 20) },
+    { config_key: 'fz_dist_mid',  config_value: num('fzDistMid', 50) },
+    { config_key: 'fz_dist_high', config_value: num('fzDistHigh', 80) },
+    { config_key: 'fr_dist_0',    config_value: num('frLow', 150) },
+    { config_key: 'fr_dist_1',    config_value: num('frMid', 90) },
+    { config_key: 'fr_dist_2',    config_value: num('frHigh', 30) },
   ];
+
+  // Key lama yang tidak dipakai lagi -> dihapus supaya tabel tidak menumpuk
+  const obsoleteKeys = ['tds_slope', 'tds_offset', 'ph_slope', 'ph_offset',
+                        'fz_tds_low', 'fz_tds_mid', 'fz_tds_high',
+                        'fr_low', 'fr_mid', 'fr_high'];
 
   try {
     for (const entry of entries) {
@@ -359,11 +452,18 @@ async function saveCalibration() {
       if (error) throw error;
     }
 
+    // Buang key lama yang sudah tidak dipakai
+    const { error: delErr } = await window.db
+      .from('calibration_config')
+      .delete()
+      .in('config_key', obsoleteKeys);
+    if (delErr) console.warn('[Control] Gagal hapus key lama:', delErr.message);
+
     if (status) { status.textContent = 'Tersimpan! ESP32 akan sync dalam ≤30 detik'; status.style.color = 'var(--color-success)'; }
-    notify.success('Parameter Fuzzy berhasil disimpan ke cloud!');
+    notify.success('Kalibrasi berhasil disimpan ke cloud!');
   } catch (e) {
     if (status) { status.textContent = 'Gagal menyimpan: ' + e.message; status.style.color = 'var(--color-danger)'; }
-    notify.error('Gagal menyimpan parameter Fuzzy');
+    notify.error('Gagal menyimpan kalibrasi');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Simpan ke Cloud'; }
   }

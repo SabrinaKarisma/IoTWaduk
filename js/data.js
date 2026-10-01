@@ -316,9 +316,16 @@ function updateRawCards(d, opts = {}) {
     }
   }
   if (rainSub) {
-    if (d.rain_state === 2) rainSub.textContent = 'Notifikasi Telegram dikirim!';
-    else if (d.rain_state === 1) rainSub.textContent = 'Hujan rintik';
-    else rainSub.textContent = 'Tidak ada hujan';
+    if (d.rain_volt != null) {
+      rainSub.textContent = `Tegangan ${fmt(d.rain_volt, 3)} V` +
+        (d.rain_adc != null ? ` · ADC ${Math.round(d.rain_adc)}` : '');
+    } else if (d.rain_state === 2) {
+      rainSub.textContent = 'Notifikasi Telegram dikirim!';
+    } else if (d.rain_state === 1) {
+      rainSub.textContent = 'Hujan rintik';
+    } else {
+      rainSub.textContent = 'Tidak ada hujan';
+    }
   }
 
   // Fuzzy Output
